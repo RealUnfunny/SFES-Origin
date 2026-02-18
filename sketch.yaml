@@ -1,0 +1,10 @@
+default_fqbn: arduino:avr:uno
+default_port: /dev/ttyACM0
+deafult_programmer: avrispmkII
+default_port_config:
+  baudrate: 9600
+
+profiles:
+  release:
+    fbqn: arduino:avr:uno
+    port: /dev/ttyAMC1

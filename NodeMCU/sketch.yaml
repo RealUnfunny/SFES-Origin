@@ -1,0 +1,9 @@
+default_fqbn: esp8266:esp8266:nodemcuv2
+default_port: /dev/ttyACM1
+default_port_config:
+  baudrate: 115200
+
+board_manager:
+  additional_urls:
+  - http://arduino.esp8266.com/stable/package_esp8266com_index.json
+  - https://arduino.esp8266.com/stable/package_esp8266com_index.json

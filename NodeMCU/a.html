@@ -1,0 +1,1710 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>That Inventory Manager</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Michroma&family=Teko:wght@400;700&display=swap');
+        
+        /* Color Palette and Font based on CM Rally 2.0 Menu */
+        :root {
+            --bg-color: #485870; /* New background color (Dark Blue-Gray) */
+            --text-color: #FFFFFF; /* White - Selected text color */
+            --secondary-text: #AAAAAA; /* Gray - Non-selected text color */
+            --selected-text: #1A1A1A; /* Dark text for high-contrast selection on light bg */
+            --input-border: #999999; /* Subtle border for inputs */
+            --new-item-color: #7CB4AE; /* Base/Start Color (Darker) */
+            --time-initial-color: #1A1A1A; /* Dark Grey for initial clock visibility */
+            /* NEW: Feedback Colors */
+            --success-color: #00CC44; /* Bright Green - Used for checkmark and FRESH */
+            --error-color: #CC0000;  /* Bright Red - Used for cross and expired/invalid inputs */
+            --going-bad-color: #33AADD; /* Lighter Blue - Used for GOING BAD */
+        }
+
+        /* --- USABILITY FIX: Remove browser focus/selection box --- */
+        *:focus, *:active {
+            outline: none !important;
+            -webkit-tap-highlight-color: transparent; /* For mobile */
+        }
+
+        /* --- Custom Scrollbar Styling (Pill Shaped, White) --- */
+        .inventory-scroll-wrapper::-webkit-scrollbar {
+            width: 8px; /* Width of the scrollbar */
+            height: 8px;
+        }
+
+        .inventory-scroll-wrapper::-webkit-scrollbar-track {
+            /* UPDATED: DEFAULT: Very subtle track background (almost transparent) */
+            background: rgba(0, 0, 0, 0.05); 
+            border-radius: 10px; /* Match thumb radius for consistency */
+            transition: background 0.2s ease-in-out; /* Add transition for smooth hover effect */
+        }
+        
+        /* UPDATED: Darker pane shows up on hover over the scrollable area (More dramatic contrast) */
+        .inventory-scroll-wrapper:hover::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.7); 
+        }
+
+        .inventory-scroll-wrapper::-webkit-scrollbar-thumb {
+            background-color: var(--text-color); /* White thumb */
+            border-radius: 10px; /* Pill shape */
+            /* Border prevents it from disappearing on very light backgrounds */
+            border: 2px solid rgba(0, 0, 0, 0.1); 
+        }
+
+        /* --- Full Page Fade Effects --- */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Helvetica Neue', 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            min-height: 10vh; /* Ensures body takes full viewport height */
+            animation: fadeIn 0.4s ease-out forwards; 
+        }
+
+        /* --- Header Refactoring for Centering --- */
+        .header {
+            display: grid;
+            grid-template-columns: 1fr auto; /* Pushed clock to the far right */
+            align-items: center; /* Vertically Center Header Titles */
+            padding-bottom: 30px;
+            width: 100%;
+            flex-shrink: 0; /* Important: keeps header size constant */
+        }
+        
+        /* Main Menu Title Styling */
+        #main-menu-title {
+            line-height: 1;
+            font-weight: bold;
+            color: var(--text-color); 
+            font-family: 'Courier New', monospace; 
+        }
+        
+        #main-menu-title span {
+            display: block;
+        }
+        
+        /* UPDATED: Title Text */
+        #main-menu-title .title-the {
+            font-size: 18px; 
+        }
+        
+        #main-menu-title .title-main {
+            font-size: 50px; 
+        }
+        
+        #main-menu-title .title-menu {
+            font-size: 70px; 
+        }
+        /* END UPDATED Title Text */
+
+        /* --- Dynamic Clock Styling (RIGHT-ALIGNED & CLICKABLE) --- */
+        .clock-container {
+            text-align: right; /* Right-aligned */
+            font-size: 16px;
+            padding-top: 5px; 
+        }
+
+        #time-wrapper {
+            position: relative; /* Anchor for absolute positioning of text */
+            cursor: pointer; /* Indicate clickable */
+            display: inline-block; /* Only take up content width */
+        }
+        
+        .clock-label {
+            color: black; 
+            display: block; 
+            margin-bottom: 0px; 
+            font-family: 'Teko', sans-serif;
+            font-size: 30px; 
+            transition: color 0.5s ease-in-out; 
+        }
+        
+        /* Time Display */
+        #time {
+            display: block;
+            font-size: 40px; 
+            font-weight: bold;
+            font-family: 'Michroma', sans-serif; 
+            line-height: 1; 
+            transition: color 3s ease-in-out, font-size 0.2s; /* Added font-size transition */
+            color: var(--time-initial-color); 
+        }
+        
+        /* Animation class for clock size tween */
+        .time-growing {
+            font-size: 45px !important; /* Slightly larger */
+        }
+
+        /* Time of Day Text (Positioned bottom-right of the time display) */
+        #time-of-day-text {
+            position: absolute;
+            bottom: -30px; 
+            right: 0; /* Aligns to the right edge of the time span */
+            font-size: 18px; 
+            font-family: 'Courier New', monospace; 
+            min-height: 18px; 
+            color: var(--text-color); /* Changed to white */
+            /* text-shadow removed as requested */
+            font-weight: bold;
+            transition: color 0.5s ease-in-out; 
+        }
+
+        /* Dynamic Time Color Classes */
+        .time-midnight { color: #00005E; }
+        .time-day { color: #00BDA3; }
+        .time-noon { color: #C2C21B; }
+        .time-evening { color: #632D69; }
+        .time-night { color: #000000; }
+
+        /* --- Status Message Fade-in (Now removed/replaced by button anim) --- */
+        @keyframes msgFadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in-message {
+            animation: msgFadeIn 0.4s ease-out;
+        }
+        
+        /* --- Pulsing Animation Keyframes --- */
+        @keyframes pulse-new-item {
+            0% { filter: brightness(1); } 
+            50% { filter: brightness(1.4); } 
+            100% { filter: brightness(1); } 
+        }
+        
+        /* New: 360-degree rotation animation */
+        @keyframes rotate-success {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Shared oscillation animation */
+        @keyframes oscillate-plus {
+            from { transform: rotate(5deg); }
+            to { transform: rotate(-5deg); }
+        }
+
+        .pulsing-plus {
+            font-size: 60px; 
+            font-weight: 700;
+            line-height: 1;
+            text-align: center;
+            color: var(--new-item-color); 
+            margin-bottom: 5px; 
+            /* Base animations */
+            animation: 
+                pulse-new-item 4s ease-in-out infinite,
+                oscillate-plus 1s ease-in-out infinite alternate; 
+            transition: transform 0.3s ease-out; /* For quick rotation feedback */
+        }
+        
+        /* Class applied on successful log */
+        .pulsing-plus.rotated {
+            animation: rotate-success 0.3s ease-out forwards;
+        }
+        
+        .pulsing-equals {
+            font-size: 60px; 
+            font-weight: 700;
+            line-height: 1;
+            text-align: center;
+            color: #00BDA3; 
+            margin-bottom: 5px; 
+            animation: 
+                pulse-new-item 4s ease-in-out infinite,
+                oscillate-plus 1s ease-in-out infinite alternate; 
+        }
+
+
+        /* --- Main Content Area and Centering --- */
+        .content-area {
+            flex-grow: 1; 
+            padding-bottom: 20px; 
+            overflow-y: hidden; 
+            display: flex; 
+            justify-content: center;
+            min-height: 0; 
+        }
+        
+        .log-form {
+             width: 100%;
+             max-width: 450px;
+             transition: opacity 0.2s ease-in-out; 
+             opacity: 1; 
+             display: flex; /* Ensure inner content is flex for centering/layout */
+             flex-direction: column;
+        }
+        
+        /* --- Inventory View Styling (for scrolling) --- */
+        .inventory-view {
+            width: 100%;
+            max-width: 600px; 
+            transition: opacity 0.2s ease-in-out; 
+            /* Set display: flex when active to match log-form layout */
+            display: flex; 
+            flex-direction: column;
+            height: 100%; 
+        }
+        
+        /* Scroll Wrapper: Fixed height for ~6 rows, transparent background */
+        .inventory-scroll-wrapper {
+            flex-grow: 1; 
+            overflow-y: auto; 
+            
+            padding: 10px; 
+            background-color: transparent; 
+            border-radius: 8px; 
+            margin-top: 10px; 
+            
+            max-height: 190px; 
+        }
+        
+        /* Media Query for Mobile/Tablet: Ensure height is fluid but capped */
+        @media (max-height: 700px) { 
+            .inventory-scroll-wrapper {
+                max-height: 30vh; 
+            }
+        }
+
+
+        .content-area h2 {
+            text-align: center;
+            margin-top: 0; 
+            margin-bottom: 20px; 
+            font-size: 55px; 
+            line-height: 1;
+            color: var(--text-color); 
+        }
+
+        /* --- Input Form Styling --- */
+        .log-form label {
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 5px;
+            font-size: 18px; 
+            color: var(--text-color);
+            font-family: 'Helvetica Neue', 'Arial', sans-serif; 
+        }
+
+        /* Input and Select Fields - Transparent background, White outline, White text */
+        .log-form input[type="text"], 
+        .log-form input[type="date"], 
+        .log-form input[type="number"], 
+        .log-form select {
+            width: 100%;
+            padding: 10px;
+            background-color: transparent; /* Make background transparent */
+            border: 1px solid var(--text-color); /* Set border to white (default) */
+            color: var(--text-color); /* Set input text color to white */
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            box-sizing: border-box;
+            border-radius: 5px;
+            filter: none; 
+            transition: border-color 0.3s ease-in-out; /* Added transition for smooth color change */
+        }
+        
+        /* NEW: Invalid Input Styling (Red Border) */
+        .log-form input.invalid-input,
+        .log-form select.invalid-input {
+            border-color: var(--error-color) !important;
+        }
+
+        /* --- NEW: A1 Disabled Input Styling (ADJUSTMENT 2) --- */
+        .log-form input.disabled-by-a1 {
+            opacity: 0.5;
+            background-color: #374151; /* Darker background */
+            border-color: var(--secondary-text); 
+        }
+
+        /* Hide default arrows for Chrome/Safari on number input */
+        input[type=number]::-webkit-outer-spin-button,
+        input[type=number]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        /* Hide default arrows for Firefox on number input */
+        input[type=number] {
+            -moz-appearance: textfield; 
+        }
+
+        /* Style for SELECT elements (Ensuring appearance:none is kept) */
+        .log-form select {
+            appearance: none; 
+        }
+
+        .log-form input[type="date"] {
+             padding-right: 10px; 
+             direction: ltr;
+        }
+        
+        /* --- Save Log Entry Button Styling (Pill-shaped, White outline, matches BG color) */
+        .log-form button:not(.qty-controls button) {
+            display: block;
+            width: 100%;
+            padding: 15px 20px; /* Bigger padding for size */
+            margin-top: 30px;
+            border-radius: 50px; /* Pill shape */
+            
+            /* Color requirements (Default state) */
+            background-color: var(--bg-color); /* Matches page background */
+            border: 2px solid var(--text-color); /* White outline */
+            color: var(--text-color); /* White text */
+            
+            /* Text style */
+            font-weight: 700;
+            font-size: 20px; /* Larger text */
+            text-transform: uppercase;
+            cursor: pointer;
+            
+            /* Added for icon animation */
+            position: relative; 
+            overflow: hidden; 
+            transition: all 0.2s ease-in-out, background-color 0.3s, border-color 0.3s;
+        }
+        
+        /* Success and Error States for the Button */
+        /* Note: Background color is applied here, but the text is still white until the icon loads */
+        .log-form button.success-state {
+            background-color: var(--success-color) !important;
+            border-color: var(--success-color) !important;
+        }
+
+        .log-form button.error-state {
+            background-color: var(--error-color) !important;
+            border-color: var(--error-color) !important;
+        }
+        
+        .log-form button:not(.qty-controls button):hover:not(:disabled) {
+            background-color: rgba(255, 255, 255, 0.1); /* Subtle hover effect */
+        }
+        
+        .log-form button:disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        /* Button Text Container */
+        #save-button-text {
+            display: block;
+            transition: opacity 0.3s; /* Fade out the text */
+        }
+
+        /* Icon Placeholder */
+        #save-button-icon {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0; /* Hidden by default */
+            transition: all 0.3s ease-in-out; /* For general fade-in/out */
+        }
+
+        /* NEW: Container for icon and message to allow sliding */
+        #save-icon-content {
+            display: flex;
+            align-items: center;
+            justify-content: center; /* Center content initially */
+            width: 100%;
+            height: 100%;
+            position: relative; 
+            /* This transition is kept but will no longer be triggered by JS for sliding */
+            transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
+        }
+        
+        /* Network Error State - Slides icon left and fades in text */
+        #save-icon-content.network-error {
+            transform: translateX(-25px); /* Slide entire content left to make space */
+        }
+        
+        /* Icon and Text Styling */
+        #feedback-icon svg {
+             width: 40px; 
+             height: 40px;
+             stroke: var(--text-color);
+             stroke-width: 2.5;
+             transition: transform 0.3s ease-in-out; /* For scaling animation */
+        }
+        
+        #feedback-message {
+            color: var(--text-color);
+            font-size: 18px;
+            font-weight: bold;
+            text-transform: none; /* Keep text case as defined */
+            margin-left: 10px; /* Space between icon and text */
+            opacity: 0;
+            white-space: nowrap; /* Prevent wrapping */
+            transform: translateX(10px); /* Initial offset for fade in */
+            /* Default transition is ready for manual JS fade-out */
+            transition: opacity 0.3s ease-in-out, transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.1s; 
+        }
+        
+        /* When network-error is applied, it enforces opacity 1 and transform 0 (the slide in) */
+        #save-icon-content.network-error #feedback-message {
+            opacity: 1;
+            transform: translateX(0);
+            /* Delayed fade in for text to start slightly after the icon begins to slide */
+            transition: opacity 0.3s ease-in-out 0.1s, transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.1s;
+        }
+
+
+        /* Scaling Classes */
+        .icon-scale-up {
+            transform: scale(1.3) !important; /* Larger size */
+        }
+        .icon-scale-down {
+            transform: scale(1) !important; /* Back to normal size */
+        }
+        /* --- END Button Animation Styling --- */
+
+
+        /* --- NEW STYLES FOR 50/50 SPLIT AND BOX PICKERS --- */
+        .flex-row { 
+            display: flex; 
+            justify-content: space-between; 
+            gap: 15px; 
+        }
+        .flex-col { 
+            flex: 1; 
+            min-width: 0; 
+        } 
+        .box-pickers { 
+            display: flex; 
+            gap: 5px; 
+        }
+        .box-pickers select { 
+            flex: 1; 
+        }
+        /* Style for disabled (allocated) options */
+        option:disabled { 
+            background-color: #374151; 
+            color: #9ca3af; 
+            filter: none; 
+        }
+        
+        /* --- QUANTITY CONTROL WRAPPER (Base) --- */
+        .quantity-control-wrapper {
+            position: relative;
+        }
+
+        /* Base input style */
+        .quantity-control-wrapper input[type="number"] {
+            padding-right: 70px; /* Make space for the horizontal controls */
+        }
+        
+        /* --- HORIZONTAL QUANTITY PILL CONTROL (Cleaned up for SVG use) --- */
+        .qty-controls.qty-horizontal {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: row;
+            width: 60px;
+            height: 26px;
+            background: var(--text-color);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 0 5px rgba(0,0,0,0.4);
+        }
+
+        .qty-horizontal .qty-btn {
+            all: unset; /* Important: removes default button styling */
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+        }
+        
+        /* Style the SVG inside the button */
+        .qty-horizontal .qty-btn svg {
+            width: 16px; /* Slightly larger icons */
+            height: 16px;
+            stroke-width: 2.5; /* Good weight for visibility */
+            color: var(--bg-color); /* Matches main background color */
+        }
+        
+        .qty-horizontal .qty-btn:active {
+            background: #e0e0e0;
+            transform: scale(0.95); /* Add active press effect */
+        }
+
+        .qty-horizontal .left {
+            border-right: 1px solid rgba(0,0,0,0.15);
+        }
+        /* --- END HORIZONTAL QUANTITY PILL CONTROL --- */
+               
+        /* --- Inventory List Styling --- */
+        .inventory-list {
+            list-style: none;
+            padding: 0;
+            display: flex; 
+            flex-direction: column;
+            margin-top: 0; 
+        }
+        
+        /* Inventory Header Row - 6 Columns (fixed above the scroll area) */
+        .inventory-header {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1.25fr 1.25fr 1.75fr 1.5fr; 
+            padding: 10px 5px;
+            border-bottom: 2px solid var(--text-color); 
+            font-weight: bold;
+            font-size: 14px;
+            color: var(--text-color);
+            align-items: center; 
+            flex-shrink: 0; 
+        }
+        
+        .inventory-header span {
+            text-align: center;
+        }
+        
+        /* --- Inventory List Item Styling (6 Columns) --- */
+        .inventory-list li {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1.25fr 1.25fr 1.75fr 1.5fr; 
+            padding: 8px 5px; 
+            border-bottom: 1px dashed var(--secondary-text);
+            font-size: 13px; 
+            align-items: center;
+            
+            opacity: 0;
+            transition: opacity 0.05s ease-in-out; 
+        }
+        
+        .inventory-list li span {
+             color: var(--text-color); 
+             overflow: hidden;
+             text-overflow: ellipsis;
+             white-space: nowrap;
+        }
+        
+        /* Aligning data columns: Exclude ONLY Item Name (2nd child). This centers Box ID. */
+        .inventory-list li span:not(:nth-child(2)) {
+            text-align: center;
+        }
+
+        .inventory-list li span:first-child {
+            color: var(--secondary-text); 
+        }
+        
+        /* --- CONDITIONAL COLOR STYLES (Verified) --- */
+        .condition-color {
+            font-weight: bold;
+        }
+
+        /* Green - Fresh (Uses --success-color: #00CC44) */
+        .inventory-list .fresh-color {
+            color: var(--success-color); 
+        }
+
+        /* Blue - Going Bad (Uses --going-bad-color: #33AADD) */
+        .inventory-list .going-bad-color {
+            color: var(--going-bad-color); 
+        }
+
+        /* Red - Expired (Uses --error-color: #CC0000) */
+        .inventory-list .expired-color {
+            color: var(--error-color); 
+        }
+        
+        /* Yellow/Orange - Warning (Used for STALE_ERROR) */
+        .inventory-list .warning-color {
+            color: #FFC000; 
+        }
+
+        /* --- Inventory Footer / Status Bar --- */
+        .inventory-footer {
+            margin-top: auto; 
+            padding-top: 10px;
+            border-top: 1px solid var(--secondary-text); 
+            text-align: center;
+            font-size: 12px;
+            color: var(--secondary-text);
+            flex-shrink: 0; 
+        }
+
+        /* --- Search Bar Styling (Horizontal Expand) --- */
+        .search-container {
+            display: flex;
+            justify-content: flex-end; 
+            align-items: center; 
+            height: 40px; 
+            margin-bottom: 15px; 
+            flex-shrink: 0; 
+        }
+        
+        /* Search Toggle Button */
+        #search-toggle {
+            all: unset;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            background-color: var(--secondary-text); 
+            border-radius: 50px;
+            transition: opacity 0.3s ease-in-out;
+            flex-shrink: 0;
+        }
+        
+        #search-toggle svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--selected-text); 
+        }
+        
+        /* Search Bar */
+        .search-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            overflow: hidden; 
+            height: 0; 
+            width: 50px; 
+            padding: 0; 
+            opacity: 0; 
+            transition: all 0.3s ease-in-out, width 0.3s ease-in-out; 
+            border-radius: 50px;
+            background-color: #AAAAAA; 
+            position: relative; 
+            z-index: 5; 
+            border: 1px solid var(--secondary-text); 
+        }
+        
+        .search-bar.expanded {
+            height: 40px;
+            width: 100%; 
+            padding: 5px 15px;
+            opacity: 1; 
+        }
+
+        #search-input, #search-column {
+            background: transparent;
+            border: none;
+            color: var(--selected-text); 
+            padding: 5px 10px;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        #search-input {
+            flex-grow: 1;
+            border-right: 1px solid var(--secondary-text);
+        }
+        
+        #search-column {
+            width: 120px;
+            cursor: pointer;
+        }
+        
+        #search-column option {
+            background-color: #AAAAAA;
+            color: var(--selected-text); 
+        }
+
+        /* --- Menu Section --- */
+        .menu-wrapper {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        
+        .dial-container {
+            width: 60%;
+            display: flex;
+            justify-content: space-around;
+            position: relative;
+            border-top: 1px solid var(--secondary-text); 
+            border-bottom: 1px solid var(--secondary-text); 
+            padding: 10px 0; 
+        }
+        
+        .dial-segment {
+            padding: 5px 15px;
+            font-size: 20px;
+            cursor: pointer;
+            transition: color 0.1s, transform 0.1s, text-shadow 0.3s;
+            text-align: center;
+            color: var(--secondary-text);
+        }
+        
+        .dial-segment.selected {
+            color: var(--text-color);
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.5); /* Glowing effect */
+        }
+        
+        .dial-segment:hover {
+            color: var(--text-color);
+            transform: scale(1.05);
+        }
+
+        /* NEW: Style for the Clear All button to make it distinct/warning */
+        .clear-inventory-btn {
+            display: block;
+            width: 100%;
+            padding: 10px 20px !important;
+            margin-top: 20px;
+            border-radius: 5px !important;
+            background-color: transparent !important;
+            border: 2px solid var(--error-color) !important; /* Red border */
+            color: var(--error-color) !important; /* Red text */
+            font-weight: 700;
+            font-size: 16px !important;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+        
+        .clear-inventory-btn:hover:not(:disabled) {
+            background-color: rgba(204, 0, 0, 0.1) !important; /* Subtle red hover */
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div id="main-menu-title">
+            <span class="title-the">That</span>
+            <span class="title-main">Inventory</span>
+            <span class="title-menu">Manager</span>
+        </div>
+        <div class="clock-container">
+            <span class="clock-label" id="selected-option-display">LOG ITEM</span>
+            <div id="time-wrapper" onclick="toggleTimeFormat()">
+                <span id="time" class="time-night">12:00</span>
+                <span id="time-of-day-text">AM/PM</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="menu-wrapper">
+        <div class="dial-container">
+            <div class="dial-segment selected" data-target="view-log-item-content">LOG ITEM</div>
+            <div class="dial-segment" data-target="view-inventory-content">INVENTORY</div>
+        </div>
+    </div>
+
+    <div class="content-area">
+        <div id="view-log-item-content" class="log-form" style="opacity: 1; display: flex;">
+            <div class="pulsing-plus">+</div>
+            <h2>log_item.</h2>
+            <form id="item-form">
+                <label for="item-name">Item Name</label>
+                <input type="text" id="item-name" placeholder="E.g., Apples, Milk, Deli Meat" required>
+                
+                <div class="flex-row">
+                    <div class="flex-col">
+                        <label for="box-letter">Box ID</label>
+                        <div class="box-pickers">
+                            <select id="box-letter" required>
+                                <option value="" disabled selected>Letter</option>
+                            </select>
+                            <select id="box-number" required>
+                                <option value="" disabled selected>Number</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex-col">
+                        <label for="item-qty">Quantity</label>
+                        <div class="quantity-control-wrapper">
+                            <input type="number" id="item-qty" value="1" min="1" required>
+                            <div class="qty-controls qty-horizontal">
+                                <button type="button" class="qty-btn left" onclick="changeQuantity(-1)">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15" />
+                                    </svg>
+                                </button>
+                                <button type="button" class="qty-btn right" onclick="changeQuantity(1)">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex-row">
+                    <div class="flex-col">
+                        <label for="item-shelf-life">Shelf Life (Days)</label>
+                        <input type="number" id="item-shelf-life" placeholder="Days" value="7" min="1" required>
+                    </div>
+                    <div class="flex-col">
+                        <label for="item-expiry">Expiry Date</label>
+                        <input type="date" id="item-expiry" required>
+                    </div>
+                </div>
+
+                <button type="submit" id="save-log-btn">
+                    <span id="save-button-text">Log New Item</span>
+                    <span id="save-button-icon">
+                        <span id="save-icon-content">
+                            <span id="feedback-icon">
+                                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" style="display: none;">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </span>
+                            <span id="feedback-message">Success!</span>
+                        </span>
+                    </span>
+                </button>
+            </form>
+        </div>
+
+        <div id="view-inventory-content" class="inventory-view" style="display: none; opacity: 0;">
+            <div class="pulsing-equals">=</div>
+            <h2>inventory.</h2>
+            
+            <div id="search-container" class="search-container">
+                <div id="search-bar" class="search-bar">
+                    <input type="text" id="search-input" placeholder="Search Inventory..." oninput="filterInventory()">
+                    <select id="search-column" onchange="filterInventory()">
+                        <option value="name">Item Name</option>
+                        <option value="box">Box ID</option>
+                        <option value="expiry">Expiry Date</option>
+                        <option value="days">Initial Days</option>
+                    </select>
+                </div>
+                <button id="search-toggle" onclick="toggleSearch()">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="inventory-header">
+                <span>BOX ID</span>
+                <span>ITEM NAME</span>
+                <span>DAYS LOGGED</span>
+                <span>DAYS LEFT</span>
+                <span>EXPIRY DATE</span>
+                <span>CONDITION</span>
+            </div>
+            
+            <div class="inventory-scroll-wrapper">
+                <ul id="inventory-list" class="inventory-list">
+                    </ul>
+            </div>
+            
+            <div class="inventory-footer">
+                Total Items: <span id="item-count">0</span> | Last Updated: <span id="last-updated">--</span>
+            </div>
+            
+            <button class="clear-inventory-btn" onclick="confirmClearAll()">
+                Clear All Inventory & Restart NodeMCU
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Mock data for initial testing/display - this should ideally be fetched from the NodeMCU
+        let mockData = [
+            // Sample entry using sensor box A1
+            { box: "A1", name: "Deli Meat", days_logged: 5, days_left: 2, expiry_date: "2025-12-20", qty: 1, initial_shelf_life: 7 }, 
+            // Sample fresh item
+            { box: "B5", name: "Apples (Red)", days_logged: 1, days_left: 13, expiry_date: "2026-01-02", qty: 4, initial_shelf_life: 14 },
+            // Sample item going bad
+            { box: "C3", name: "Milk (2%)", days_logged: 6, days_left: 1, expiry_date: "2025-12-16", qty: 2, initial_shelf_life: 7 },
+            // Sample expired item
+            { box: "D7", name: "Yogurt (Vanilla)", days_logged: 10, days_left: -2, expiry_date: "2025-12-13", qty: 6, initial_shelf_life: 8 },
+        ];
+        
+        let timeFormat24h = false;
+        let intervalId = null;
+
+        /**
+         * Utility function to get today's date plus an offset in YYYY-MM-DD format.
+         * @param {number} offset - The number of days to add (or subtract).
+         */
+        function getDateString(offset = 0) {
+            const date = new Date();
+            date.setDate(date.getDate() + offset);
+            
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            
+            return `${year}-${month}-${day}`;
+        }
+        
+        // --- TIME/CLOCK FUNCTIONS ---
+
+        /**
+         * Updates the clock display every second.
+         * @param {boolean} initial - True if this is the initial setup call.
+         */
+        function updateTime(initial = false) {
+            const now = new Date();
+            let hours = now.getHours();
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            let ampm = '';
+            
+            let timeString;
+            
+            if (timeFormat24h) {
+                timeString = `${String(hours).padStart(2, '0')}:${minutes}`;
+            } else {
+                ampm = hours >= 12 ? 'PM' : 'AM';
+                hours = hours % 12;
+                hours = hours ? hours : 12; // The hour '0' should be '12'
+                timeString = `${String(hours).padStart(2, '0')}:${minutes}`;
+            }
+
+            // Apply slight size animation to seconds change (only if not initial load)
+            const timeSpan = document.getElementById('time');
+            if (!initial) {
+                 if (parseInt(seconds) % 2 === 0) {
+                    timeSpan.classList.add('time-growing');
+                 } else {
+                    timeSpan.classList.remove('time-growing');
+                 }
+            }
+
+
+            document.getElementById('time').textContent = timeString;
+            document.getElementById('time-of-day-text').textContent = timeFormat24h ? '' : ampm;
+            
+            // Apply color class based on time of day
+            let colorClass;
+            if (hours >= 0 && hours < 5) {
+                 colorClass = 'time-midnight'; // 12am - 5am
+            } else if (hours >= 5 && hours < 11) {
+                 colorClass = 'time-day'; // 5am - 11am
+            } else if (hours >= 11 && hours < 14) {
+                 colorClass = 'time-noon'; // 11am - 2pm
+            } else if (hours >= 14 && hours < 19) {
+                 colorClass = 'time-evening'; // 2pm - 7pm
+            } else {
+                 colorClass = 'time-night'; // 7pm - 12am
+            }
+
+            // Remove existing color classes and apply the new one
+            timeSpan.className = timeSpan.className.split(' ').filter(c => !c.startsWith('time-')).join(' ');
+            timeSpan.classList.add(colorClass);
+        }
+
+        /**
+         * Toggles between 12-hour and 24-hour time format.
+         */
+        function toggleTimeFormat() {
+            timeFormat24h = !timeFormat24h;
+            updateTime();
+        }
+
+        // --- FORM DATA & VALIDATION UTILITIES ---
+
+        /**
+         * Calculates the difference in days between two date strings (YYYY-MM-DD).
+         * @param {string} date1 - The start date.
+         * @param {string} date2 - The end date.
+         * @returns {number} The difference in days (can be negative).
+         */
+        function calculateDaysDifference(date1, date2) {
+            const oneDay = 24 * 60 * 60 * 1000; // milliseconds in a day
+            const d1 = new Date(date1);
+            const d2 = new Date(date2);
+            
+            // Fix timezone offset issue by setting both to noon
+            d1.setHours(12, 0, 0, 0);
+            d2.setHours(12, 0, 0, 0);
+
+            // Return difference rounded to the nearest integer
+            return Math.round(Math.abs((d2.getTime() - d1.getTime()) / oneDay));
+        }
+
+        /**
+         * Calculates expiry date based on shelf life days.
+         */
+        function updateExpiryDateFromDays() {
+            const daysInput = document.getElementById('item-shelf-life');
+            const expiryInput = document.getElementById('item-expiry');
+            const days = parseInt(daysInput.value, 10);
+            
+            if (days > 0) {
+                // Expiry date is today + days
+                expiryInput.value = getDateString(days);
+                expiryInput.classList.remove('invalid-input');
+                daysInput.classList.remove('invalid-input');
+            } else {
+                expiryInput.value = '';
+            }
+            
+            // Re-run the A1 check
+            toggleExpiryFields();
+        }
+
+        /**
+         * Calculates shelf life days based on expiry date.
+         */
+        function updateDaysFromExpiryDate() {
+            const daysInput = document.getElementById('item-shelf-life');
+            const expiryInput = document.getElementById('item-expiry');
+            const expiryDate = expiryInput.value;
+            
+            if (expiryDate) {
+                const days = calculateDaysDifference(getDateString(), expiryDate);
+                // We use the days difference as the 'shelf life' for this log entry
+                daysInput.value = Math.max(1, days); 
+                expiryInput.classList.remove('invalid-input');
+                daysInput.classList.remove('invalid-input');
+            } else {
+                 daysInput.value = '7'; // Default if date is cleared
+            }
+            
+            // Re-run the A1 check
+            toggleExpiryFields();
+        }
+        
+        /**
+         * Handles the +1/-1 button clicks for quantity.
+         * @param {number} delta - Either 1 or -1.
+         */
+        function changeQuantity(delta) {
+            const qtyInput = document.getElementById('item-qty');
+            let currentQty = parseInt(qtyInput.value, 10);
+            if (isNaN(currentQty)) currentQty = 1;
+            
+            const newQty = currentQty + delta;
+            
+            if (newQty >= 1) {
+                qtyInput.value = newQty;
+                qtyInput.classList.remove('invalid-input'); // Clear error on interaction
+            }
+        }
+        
+        // --- BOX PICKER & ALLOCATION LOGIC ---
+
+        /**
+         * Gathers all allocated box IDs from mockData.
+         */
+        function getAllocatedBoxes() {
+            return mockData.map(item => item.box);
+        }
+        
+        /**
+         * Populates the Box Letter and Box Number selects, disabling allocated boxes.
+         */
+        function populateBoxPickers() {
+            const letters = Array.from({ length: 10 }, (_, i) => String.fromCharCode(65 + i)); // A-J
+            const numbers = Array.from({ length: 10 }, (_, i) => i); // 0-9
+            const allAllocatedBoxes = getAllocatedBoxes();
+            
+            const letterSelect = document.getElementById('box-letter');
+            const numberSelect = document.getElementById('box-number');
+
+            // 1. Populate Letter Select
+            const currentLetter = letterSelect.value;
+            letterSelect.innerHTML = '<option value="" disabled selected>Letter</option>';
+            letters.forEach(letter => {
+                const opt = document.createElement('option');
+                opt.value = letter;
+                opt.textContent = letter;
+                // Simple check: disable the letter if ALL its numbers are allocated (optional, complex)
+                // For now, just focus on disabling the number in the next step
+                letterSelect.appendChild(opt);
+            });
+            
+            // Re-select current letter if still valid
+            if (currentLetter && letters.includes(currentLetter)) {
+                letterSelect.value = currentLetter;
+            }
+            
+            // 2. Populate Number Select based on selected Letter
+            const selectedLetter = letterSelect.value;
+            numberSelect.innerHTML = '<option value="" disabled selected>Number</option>';
+            
+            if (selectedLetter) {
+                numbers.forEach(number => {
+                    const numStr = number.toString();
+                    const boxId = selectedLetter + numStr;
+                    const opt = document.createElement('option');
+                    opt.value = numStr;
+                    opt.textContent = numStr;
+                    
+                    if (allAllocatedBoxes.includes(boxId)) {
+                        opt.disabled = true;
+                        opt.textContent += ' (USED)';
+                    }
+                    numberSelect.appendChild(opt);
+                });
+            }
+        }
+
+        // --- ADJUSTMENT 2: Disable Expiry Fields for A1 ---
+
+        /**
+         * Disables expiry date fields if Box ID A1 is selected.
+         */
+        function toggleExpiryFields() {
+            const letter = document.getElementById('box-letter').value;
+            const number = document.getElementById('box-number').value;
+            const isA1 = (letter === 'A' && number === '1');
+            
+            const expiryInput = document.getElementById('item-expiry');
+            const shelfLifeInput = document.getElementById('item-shelf-life');
+            
+            expiryInput.disabled = isA1;
+            shelfLifeInput.disabled = isA1;
+            
+            // Visually indicate the disabled state and optionally clear values
+            if (isA1) {
+                // We don't want to clear the inputs as they are 'required', but disable them
+                // We can set default placeholder data if needed, but disabling is sufficient
+                expiryInput.classList.add('disabled-by-a1');
+                shelfLifeInput.classList.add('disabled-by-a1');
+            } else {
+                expiryInput.classList.remove('disabled-by-a1');
+                shelfLifeInput.classList.remove('disabled-by-a1');
+                // Re-calculate default date when re-enabling if days input is empty
+                if (!shelfLifeInput.value || parseInt(shelfLifeInput.value) < 1) {
+                    shelfLifeInput.value = '7';
+                    updateExpiryDateFromDays();
+                }
+            }
+        }
+
+
+        // --- BUTTON ANIMATION & FEEDBACK (ADJUSTMENT 1 MODIFIED) ---
+
+        /**
+         * Handles the complex animation and visual feedback of the save button.
+         * @param {boolean} isSuccess - True for success (green check), false for error (red cross).
+         * @param {'success'|'validation'|'network'} feedbackType - Type of feedback.
+         * @param {string} message - The message to display on error.
+         */
+        function animateButtonFeedback(isSuccess, feedbackType, message = '') {
+            const button = document.getElementById('save-log-btn');
+            const buttonText = document.getElementById('save-button-text');
+            const buttonIconContainer = document.getElementById('save-button-icon');
+            const feedbackIconPlaceholder = document.getElementById('feedback-icon');
+            const feedbackMessage = document.getElementById('feedback-message');
+            const iconContentWrapper = document.getElementById('save-icon-content');
+            
+            // Find the correct SVG path based on success/failure
+            const successSvgPath = '<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />'; // Checkmark
+            const errorSvgPath = '<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />'; // Cross
+
+            // Set button state and icon/message content
+            button.classList.remove('success-state', 'error-state');
+            button.classList.add(isSuccess ? 'success-state' : 'error-state');
+            button.disabled = true; // Disable button during animation
+            
+            // Set icon and message
+            feedbackIconPlaceholder.querySelector('svg').innerHTML = isSuccess ? successSvgPath : errorSvgPath;
+            feedbackMessage.textContent = isSuccess ? 'Success!' : message;
+            
+            // NEW FOR ADJUSTMENT 1: Control message display to center the icon on success
+            if (isSuccess) {
+                 feedbackMessage.style.display = 'none'; // Hide the message element completely on success
+            } else {
+                 feedbackMessage.style.display = 'inline'; // Ensure it's visible for error messages
+            }
+
+            const svgIcon = feedbackIconPlaceholder.querySelector('svg');
+
+            // Step 1. Fade out the text
+            buttonText.style.opacity = '0';
+            
+            // Step 2. Wait for text fade-out, then fade in the icon
+            setTimeout(() => {
+                buttonIconContainer.style.opacity = '1';
+                svgIcon.style.display = 'block';
+                
+                // Animate icon scale-up (quick pop)
+                svgIcon.classList.add('icon-scale-up');
+
+                // If it's a network/validation error, slide the message in
+                if (!isSuccess && feedbackType !== 'success') {
+                    // Apply the network-error class which controls the slide transform for the wrapper
+                    iconContentWrapper.classList.add('network-error'); 
+                    feedbackMessage.style.opacity = '1';
+                    feedbackMessage.style.transform = 'translateX(0)';
+                }
+
+                // Step 3. Wait a moment, then fade back to normal state
+                setTimeout(() => {
+                    svgIcon.classList.remove('icon-scale-up');
+                    svgIcon.classList.add('icon-scale-down');
+                    
+                    // Start fade-out of icon container after a pause
+                    setTimeout(finalCleanup, isSuccess ? 1000 : 3000); // Shorter display for success, longer for errors
+                }, 300); // Quick pop state duration
+
+            }, 300); // Matches buttonText transition duration
+
+            // Clean-up function to reset all styles
+            const finalCleanup = () => {
+                buttonIconContainer.style.opacity = '0';
+                svgIcon.style.display = 'none';
+                buttonText.style.opacity = '1';
+                button.classList.remove('success-state', 'error-state');
+                button.disabled = false;
+                
+                // CRITICAL: Reset network-error class and message state
+                feedbackMessage.style.opacity = '0';
+                feedbackMessage.style.transform = 'translateX(10px)'; 
+                iconContentWrapper.classList.remove('network-error');
+                
+                // NEW FOR ADJUSTMENT 1: Reset message display
+                feedbackMessage.style.display = 'inline'; 
+
+                if (svgIcon) {
+                    svgIcon.classList.remove('icon-scale-up', 'icon-scale-down');
+                }
+                document.querySelector('.pulsing-plus').classList.remove('rotated');
+            };
+        }
+
+
+        // --- NODE MCU INTERACTION (MOCK) ---
+
+        /**
+         * Mocks sending data to the NodeMCU endpoint.
+         * @param {object} formData - The data to send (name, box, days, qty).
+         * @returns {Promise<boolean>} True if successful, false otherwise.
+         */
+        async function sendDataToNodeMCU(formData) {
+            // Mock API call delay
+            await new Promise(resolve => setTimeout(resolve, 500)); 
+            
+            // MOCK: Simulate success 90% of the time
+            if (Math.random() < 0.9) {
+                // Add new item to mock data
+                const newItem = {
+                    box: formData.box,
+                    name: formData.name,
+                    days_logged: 0, 
+                    days_left: formData.days,
+                    expiry_date: formData.expiry,
+                    qty: formData.qty,
+                    initial_shelf_life: formData.days 
+                };
+                mockData.push(newItem);
+                
+                // Simulate a successful HTTP GET request to the mock endpoint
+                // const fetchUrl = `/log?box=${formData.box}&name=${formData.name}&days=${formData.days}&qty=${formData.qty}`;
+                // console.log(`MOCK: Sent data to ${fetchUrl}`); 
+                return true; 
+            } else {
+                // MOCK: Simulate network error 10% of the time
+                console.error("MOCK: Simulated Network Error");
+                throw new Error("NodeMCU not reachable (Simulated network error)");
+            }
+        }
+        
+        /**
+         * Mocks fetching the inventory data from the NodeMCU.
+         */
+        async function fetchInventoryData() {
+            // Mock API call delay
+            await new Promise(resolve => setTimeout(resolve, 300)); 
+            
+            // Mock: Returns the current in-memory mockData
+            return mockData;
+        }
+
+        /**
+         * Validates the form inputs before submission.
+         * @param {object} data - Form data.
+         * @returns {boolean} True if valid, false otherwise.
+         */
+        function validateForm(data) {
+            const inputs = document.getElementById('item-form').querySelectorAll('input, select');
+            let isValid = true;
+            let firstInvalidInput = null;
+
+            // Clear previous errors
+            inputs.forEach(input => input.classList.remove('invalid-input'));
+
+            // Check required fields and logic
+            if (!data.name) {
+                document.getElementById('item-name').classList.add('invalid-input');
+                if (!firstInvalidInput) firstInvalidInput = document.getElementById('item-name');
+                isValid = false;
+            }
+            if (!data.box) {
+                document.getElementById('box-letter').classList.add('invalid-input');
+                document.getElementById('box-number').classList.add('invalid-input');
+                if (!firstInvalidInput) firstInvalidInput = document.getElementById('box-letter');
+                isValid = false;
+            }
+            if (data.qty < 1 || isNaN(data.qty)) {
+                 document.getElementById('item-qty').classList.add('invalid-input');
+                 if (!firstInvalidInput) firstInvalidInput = document.getElementById('item-qty');
+                 isValid = false;
+            }
+            
+            // Only validate expiry/days if box is NOT A1
+            const isA1 = (data.box === 'A1');
+
+            if (!isA1) {
+                if (!data.days || data.days < 1) {
+                    document.getElementById('item-shelf-life').classList.add('invalid-input');
+                    if (!firstInvalidInput) firstInvalidInput = document.getElementById('item-shelf-life');
+                    isValid = false;
+                }
+                if (!data.expiry) {
+                    document.getElementById('item-expiry').classList.add('invalid-input');
+                    if (!firstInvalidInput) firstInvalidInput = document.getElementById('item-expiry');
+                    isValid = false;
+                }
+            }
+            
+            if (firstInvalidInput) {
+                firstInvalidInput.focus();
+            }
+            
+            return isValid;
+        }
+
+        /**
+         * Handles the form submission logic.
+         */
+        async function submitItem(event) {
+            event.preventDefault();
+            
+            const letter = document.getElementById('box-letter').value;
+            const number = document.getElementById('box-number').value;
+            
+            const formData = {
+                name: document.getElementById('item-name').value.trim(),
+                box: letter && number ? letter + number : '',
+                days: parseInt(document.getElementById('item-shelf-life').value, 10),
+                expiry: document.getElementById('item-expiry').value,
+                qty: parseInt(document.getElementById('item-qty').value, 10),
+            };
+
+            if (!validateForm(formData)) {
+                // If validation fails, display validation error feedback
+                animateButtonFeedback(false, 'validation', 'Input Error!');
+                return;
+            }
+            
+            // If the box is A1, we set shelf life fields to default/ignored values for logging
+            if (formData.box === 'A1') {
+                 formData.days = 365; // A long shelf life to prevent expiry warnings in the inventory view
+                 formData.expiry = getDateString(365); // Far-off date
+            }
+
+            try {
+                // Attempt to send data to the mocked NodeMCU
+                await sendDataToNodeMCU(formData);
+
+                // On success: update UI and give success feedback
+                animateButtonFeedback(true, 'success');
+                document.getElementById('item-form').reset(); // Clear the form
+                document.getElementById('item-qty').value = '1'; // Reset Qty default
+                document.getElementById('item-shelf-life').value = '7'; // Reset days default
+                updateExpiryDateFromDays(); // Recalculate expiry
+                
+                populateBoxPickers(); // Repopulate pickers to show the box is now used
+                renderInventoryList(mockData); // Update inventory list
+                
+                // Animate the plus icon on success
+                document.querySelector('.pulsing-plus').classList.add('rotated');
+
+            } catch (error) {
+                // On error: give network error feedback
+                animateButtonFeedback(false, 'network', 'Server Error!');
+                console.error("Submission failed:", error);
+            }
+        }
+        
+        // --- INVENTORY VIEW LOGIC ---
+
+        /**
+         * Determines the condition of an inventory item.
+         * @param {object} item - The inventory item object.
+         * @returns {{condition: string, colorClass: string}} The condition text and its corresponding CSS class.
+         */
+        function getItemCondition(item) {
+            // Special handling for Box A1 (sensor box)
+            if (item.box === 'A1') {
+                const now = new Date();
+                const logTime = new Date(item.expiry_date); // Using expiry_date as a proxy for last sensor reading time
+                const hoursDifference = (now - logTime) / (1000 * 60 * 60);
+
+                if (hoursDifference > 24) {
+                    return { condition: "STALE DATA", colorClass: "warning-color" }; // Data is > 24 hours old
+                }
+                
+                // If data is fresh, apply a condition based on a predefined A1 rule (or sensor input)
+                // MOCKING: If log time is recent, show it as 'FRESH'
+                return { condition: "FRESH", colorClass: "fresh-color" };
+            }
+            
+            // Standard condition logic
+            if (item.days_left <= 0) {
+                return { condition: "EXPIRED", colorClass: "expired-color" };
+            } else if (item.days_left <= Math.ceil(item.initial_shelf_life * 0.2)) {
+                // Going bad if less than 20% of initial shelf life remains
+                return { condition: "GOING BAD", colorClass: "going-bad-color" };
+            } else {
+                return { condition: "FRESH", colorClass: "fresh-color" };
+            }
+        }
+        
+        /**
+         * Renders the inventory list based on the provided data.
+         * @param {Array<object>} data - The list of inventory items.
+         */
+        function renderInventoryList(data) {
+            const list = document.getElementById('inventory-list');
+            list.innerHTML = '';
+            
+            // Update counts and time
+            document.getElementById('item-count').textContent = data.length;
+            document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
+
+            data.forEach((item, index) => {
+                const listItem = document.createElement('li');
+                
+                const { condition, colorClass } = getItemCondition(item);
+
+                // Days Logged Calculation: Current date - Expiry Date + Days Left
+                const days_logged = calculateDaysDifference(getDateString(), item.expiry_date) - item.days_left;
+
+                listItem.innerHTML = `
+                    <span>${item.box}</span>
+                    <span style="text-align: left; padding-left: 10px;">${item.name} (${item.qty} pcs)</span>
+                    <span>${days_logged >= 0 ? days_logged : '--'}</span>
+                    <span class="${item.days_left <= 3 ? 'warning-color' : ''}">${item.days_left}</span>
+                    <span>${item.expiry_date}</span>
+                    <span class="condition-color ${colorClass}">${condition}</span>
+                `;
+                
+                // Apply staggered fade-in animation
+                setTimeout(() => {
+                     listItem.style.opacity = '1';
+                }, index * 20); // 20ms delay per item
+
+                list.appendChild(listItem);
+            });
+            
+            // If the list is empty, show a message
+            if (data.length === 0) {
+                 list.innerHTML = `<li style="display: block; text-align: center; opacity: 1; padding: 30px; color: var(--secondary-text); border: none;">No items currently logged.</li>`;
+            }
+        }
+        
+        /**
+         * Filters the inventory list based on the search input and selected column.
+         */
+        function filterInventory() {
+            const input = document.getElementById('search-input').value.toLowerCase();
+            const column = document.getElementById('search-column').value;
+            
+            const filteredData = mockData.filter(item => {
+                let value = '';
+                
+                // Select the value to check based on the chosen column
+                if (column === 'name') {
+                    value = item.name.toLowerCase();
+                } else if (column === 'box') {
+                    value = item.box.toLowerCase();
+                } else if (column === 'expiry') {
+                    value = item.expiry_date.toLowerCase();
+                } else if (column === 'days') {
+                    value = item.initial_shelf_life.toString();
+                }
+                
+                return value.includes(input);
+            });
+            
+            renderInventoryList(filteredData);
+        }
+
+        /**
+         * Toggles the visibility and expansion of the search bar.
+         */
+        function toggleSearch(initial = false) {
+             const searchBar = document.getElementById('search-bar');
+             const searchToggle = document.getElementById('search-toggle');
+             
+             if (searchBar.classList.contains('expanded') && !initial) {
+                 // Collapse
+                 searchBar.classList.remove('expanded');
+                 searchToggle.style.opacity = '1';
+                 document.getElementById('search-input').value = '';
+                 filterInventory(); // Reset filter
+             } else {
+                 // Expand
+                 searchBar.classList.add('expanded');
+                 searchToggle.style.opacity = '0'; // Hide button when bar is open
+                 document.getElementById('search-input').focus();
+             }
+        }
+        
+        // --- MENU LOGIC ---
+
+        /**
+         * Handles the click on the menu dial segments.
+         */
+        function handleMenuClick(event) {
+            const target = event.target;
+            const targetId = target.getAttribute('data-target');
+            
+            if (target.classList.contains('selected')) return; // Already selected
+
+            // Update header display
+            document.getElementById('selected-option-display').textContent = target.textContent;
+
+            // Update dial selection
+            document.querySelectorAll('.dial-segment').forEach(segment => {
+                segment.classList.remove('selected');
+            });
+            target.classList.add('selected');
+
+            // Find current and next content views
+            const currentView = document.querySelector('.content-area > div[style*="opacity: 1"]');
+            const nextView = document.getElementById(targetId);
+            
+            if (currentView) {
+                // 1. Fade out current view
+                currentView.style.opacity = '0';
+                
+                // 2. Wait for fade out, then switch display to none
+                setTimeout(() => {
+                    currentView.style.display = 'none';
+
+                    // 3. Switch to next view and fade in
+                    if (nextView) {
+                        nextView.style.display = 'flex'; // Use flex for vertical centering/layout
+                        setTimeout(() => {
+                             nextView.style.opacity = '1';
+                        }, 20); // Slight delay for browser reflow/display change to register
+                    }
+                    
+                }, 200); // Matches opacity transition duration
+            }
+            
+            // If switching to inventory, ensure list is rendered
+            if (targetId === 'view-inventory-content') {
+                 renderInventoryList(mockData);
+                 toggleSearch(true); // Ensure search bar is reset/collapsed
+            } else if (targetId === 'view-log-item-content') {
+                 document.getElementById('item-form').reset();
+                 document.getElementById('item-qty').value = '1';
+                 document.getElementById('item-shelf-life').value = '7';
+                 updateExpiryDateFromDays();
+                 populateBoxPickers();
+                 toggleExpiryFields();
+            }
+        }
+        
+        /**
+         * Confirmation dialog for clearing all inventory.
+         */
+        function confirmClearAll() {
+            const confirmed = window.confirm("WARNING: Are you sure you want to CLEAR ALL inventory data and RESTART the NodeMCU? This action cannot be undone.");
+            
+            if (confirmed) {
+                 clearAllInventory();
+            }
+        }
+
+        /**
+         * Placeholder function to simulate clearing inventory and restarting NodeMCU.
+         */
+        function clearAllInventory() {
+            // MOCK IMPLEMENTATION:
+            console.log("MOCK: Sending /clearall request to NodeMCU...");
+            mockData = []; // Clear the local mock data
+            renderInventoryList(mockData);
+            populateBoxPickers();
+            
+            // In a real application, this would involve a fetch call:
+            /* const fetchUrl = '/clearall';
+            fetch(fetchUrl)
+                .then(response => {
+                    if (response.ok) {
+                        alert("Inventory clear request sent. Device is restarting now.");
+                        mockData = []; 
+                        renderInventoryList(mockData);
+                        populateBoxPickers();
+                    } else {
+                        throw new Error(`Server returned status ${response.status}`);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error clearing inventory:', error);
+                    alert(`Failed to clear inventory: ${error.message}.`);
+                });
+            */
+            alert("MOCK: Inventory cleared and device restart simulated.");
+        }
+
+
+        // --- DOM CONTENT LOADED ---
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            // Setup form listeners
+            document.getElementById('item-form').addEventListener('submit', submitItem);
+            
+            // Setup menu listeners
+            document.querySelectorAll('.dial-segment').forEach(segment => {
+                segment.addEventListener('click', handleMenuClick);
+            });
+
+            // Setup time calculation listeners for days vs date
+            document.getElementById('item-shelf-life').addEventListener('input', updateExpiryDateFromDays);
+            document.getElementById('item-expiry').addEventListener('input', updateDaysFromExpiryDate);
+            
+            // Initial setup of dynamic form elements
+            // We need to slightly adjust populateBoxPickers to keep its internal letter change logic
+            populateBoxPickers();
+            
+            // Re-apply listener to update number options when letter changes (kept in populateBoxPickers for efficiency)
+            const letterSelect = document.getElementById('box-letter');
+            
+            // The logic to repopulate numbers when letter changes is inside populateBoxPickers' onchange handler.
+            // We just add a listener to ensure A1 logic runs.
+            letterSelect.addEventListener('change', toggleExpiryFields);
+            
+            // NEW LISTENER for box number change (ADJUSTMENT 2)
+            const numberSelect = document.getElementById('box-number');
+            numberSelect.addEventListener('change', toggleExpiryFields);
+            
+            // Set minimum date for expiry field to today
+            document.getElementById('item-expiry').min = getDateString(1);
+            
+            // Initial checks on load
+            updateExpiryDateFromDays(); // Initial date calculation
+            toggleExpiryFields(); // Initial A1 check
+            
+            // Initial Clock Setup
+            updateTime(true);
+            intervalId = setInterval(updateTime, 1000); 
+
+            // Initial Load of Inventory Data
+            // In a real app, this would be an async call: await fetchInventoryData();
+            renderInventoryList(mockData); 
+        });
+
+    </script>
+
+</body>
+</html>

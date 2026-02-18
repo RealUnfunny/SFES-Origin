@@ -1,0 +1,1714 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>That Inventory Manager</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Michroma&family=Teko:wght@400;700&display=swap');
+        
+        /* Color Palette and Font based on CM Rally 2.0 Menu */
+        :root {
+            --bg-color: #485870; /* New background color (Dark Blue-Gray) */
+            --text-color: #FFFFFF; /* White - Selected text color */
+            --secondary-text: #AAAAAA; /* Gray - Non-selected text color */
+            --selected-text: #1A1A1A; /* Dark text for high-contrast selection on light bg */
+            --input-border: #999999; /* Subtle border for inputs */
+            --new-item-color: #7CB4AE; /* Base/Start Color (Darker) */
+            --time-initial-color: #1A1A1A; /* Dark Grey for initial clock visibility */
+            /* NEW: Feedback Colors */
+            --success-color: #00CC44; /* Bright Green - Used for checkmark and FRESH */
+            --error-color: #CC0000;  /* Bright Red - Used for cross and expired/invalid inputs */
+            --going-bad-color: #33AADD; /* Lighter Blue - Used for GOING BAD */
+        }
+
+        /* --- USABILITY FIX: Remove browser focus/selection box --- */
+        *:focus, *:active {
+            outline: none !important;
+            -webkit-tap-highlight-color: transparent; /* For mobile */
+        }
+
+        /* --- Custom Scrollbar Styling (Pill Shaped, White) --- */
+        .inventory-scroll-wrapper::-webkit-scrollbar {
+            width: 8px; /* Width of the scrollbar */
+            height: 8px;
+        }
+
+        .inventory-scroll-wrapper::-webkit-scrollbar-track {
+            /* UPDATED: DEFAULT: Very subtle track background (almost transparent) */
+            background: rgba(0, 0, 0, 0.05); 
+            border-radius: 10px; /* Match thumb radius for consistency */
+            transition: background 0.2s ease-in-out; /* Add transition for smooth hover effect */
+        }
+        
+        /* UPDATED: Darker pane shows up on hover over the scrollable area (More dramatic contrast) */
+        .inventory-scroll-wrapper:hover::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.7); 
+        }
+
+        .inventory-scroll-wrapper::-webkit-scrollbar-thumb {
+            background-color: var(--text-color); /* White thumb */
+            border-radius: 10px; /* Pill shape */
+            /* Border prevents it from disappearing on very light backgrounds */
+            border: 2px solid rgba(0, 0, 0, 0.1); 
+        }
+
+        /* --- Full Page Fade Effects --- */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Helvetica Neue', 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh; /* Ensures body takes full viewport height */
+            animation: fadeIn 0.4s ease-out forwards; 
+        }
+
+        /* --- Header Refactoring for Centering --- */
+        .header {
+            display: grid;
+            grid-template-columns: 1fr auto; /* Pushed clock to the far right */
+            align-items: center; /* Vertically Center Header Titles */
+            padding-bottom: 30px;
+            width: 100%;
+            flex-shrink: 0; /* Important: keeps header size constant */
+        }
+        
+        /* Main Menu Title Styling */
+        #main-menu-title {
+            line-height: 1;
+            font-weight: bold;
+            color: var(--text-color); 
+            font-family: 'Courier New', monospace; 
+        }
+        
+        #main-menu-title span {
+            display: block;
+        }
+        
+        /* UPDATED: Title Text */
+        #main-menu-title .title-the {
+            font-size: 18px; 
+        }
+        
+        #main-menu-title .title-main {
+            font-size: 50px; 
+        }
+        
+        #main-menu-title .title-menu {
+            font-size: 70px; 
+        }
+        /* END UPDATED Title Text */
+
+        /* --- Dynamic Clock Styling (RIGHT-ALIGNED & CLICKABLE) --- */
+        .clock-container {
+            text-align: right; /* Right-aligned */
+            font-size: 16px;
+            padding-top: 5px; 
+        }
+
+        #time-wrapper {
+            position: relative; /* Anchor for absolute positioning of text */
+            cursor: pointer; /* Indicate clickable */
+            display: inline-block; /* Only take up content width */
+        }
+        
+        .clock-label {
+            color: black; 
+            display: block; 
+            margin-bottom: 0px; 
+            font-family: 'Teko', sans-serif;
+            font-size: 30px; 
+            transition: color 0.5s ease-in-out; 
+        }
+        
+        /* Time Display */
+        #time {
+            display: block;
+            font-size: 40px; 
+            font-weight: bold;
+            font-family: 'Michroma', sans-serif; 
+            line-height: 1; 
+            transition: color 3s ease-in-out, font-size 0.2s; /* Added font-size transition */
+            color: var(--time-initial-color); 
+        }
+        
+        /* Animation class for clock size tween */
+        .time-growing {
+            font-size: 45px !important; /* Slightly larger */
+        }
+
+        /* Time of Day Text (Positioned bottom-right of the time display) */
+        #time-of-day-text {
+            position: absolute;
+            bottom: -30px; 
+            right: 0; /* Aligns to the right edge of the time span */
+            font-size: 18px; 
+            font-family: 'Courier New', monospace; 
+            min-height: 18px; 
+            color: var(--text-color); /* Changed to white */
+            font-weight: bold;
+            transition: color 0.5s ease-in-out; 
+        }
+
+        /* Dynamic Time Color Classes */
+        .time-midnight { color: #00005E; }
+        .time-day { color: #00BDA3; }
+        .time-noon { color: #C2C21B; }
+        .time-evening { color: #632D69; }
+        .time-night { color: #000000; }
+
+        /* --- Status Message Fade-in (Now removed/replaced by button anim) --- */
+        @keyframes msgFadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in-message {
+            animation: msgFadeIn 0.4s ease-out;
+        }
+        
+        /* --- Pulsing Animation Keyframes --- */
+        @keyframes pulse-new-item {
+            0% { filter: brightness(1); } 
+            50% { filter: brightness(1.4); } 
+            100% { filter: brightness(1); } 
+        }
+        
+        /* New: 360-degree rotation animation */
+        @keyframes rotate-success {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Shared oscillation animation */
+        @keyframes oscillate-plus {
+            from { transform: rotate(5deg); }
+            to { transform: rotate(-5deg); }
+        }
+
+        .pulsing-plus {
+            font-size: 60px; 
+            font-weight: 700;
+            line-height: 1;
+            text-align: center;
+            color: var(--new-item-color); 
+            margin-bottom: 5px; 
+            /* Base animations */
+            animation: 
+                pulse-new-item 4s ease-in-out infinite,
+                oscillate-plus 1s ease-in-out infinite alternate; 
+            transition: transform 0.3s ease-out; /* For quick rotation feedback */
+        }
+        
+        /* Class applied on successful log */
+        .pulsing-plus.rotated {
+            animation: rotate-success 0.3s ease-out forwards;
+        }
+        
+        .pulsing-equals {
+            font-size: 60px; 
+            font-weight: 700;
+            line-height: 1;
+            text-align: center;
+            color: #00BDA3; 
+            margin-bottom: 5px; 
+            animation: 
+                pulse-new-item 4s ease-in-out infinite,
+                oscillate-plus 1s ease-in-out infinite alternate; 
+        }
+
+
+        /* --- Main Content Area and Centering --- */
+        .content-area {
+            flex-grow: 1; 
+            padding-bottom: 20px; 
+            overflow-y: hidden; 
+            display: flex; 
+            justify-content: center;
+            min-height: 0; 
+        }
+        
+        .log-form {
+             width: 100%;
+             max-width: 450px;
+             transition: opacity 0.2s ease-in-out; 
+             opacity: 1; 
+        }
+        
+        /* --- Inventory View Styling (for scrolling) --- */
+        .inventory-view {
+            width: 100%;
+            max-width: 700px; /* Increased max width to fit the delete button */
+            transition: opacity 0.2s ease-in-out; 
+            opacity: 1; 
+            
+            display: flex;
+            flex-direction: column;
+            height: 100%; 
+        }
+        
+        /* Scroll Wrapper: Fixed height for ~6 rows, transparent background */
+        .inventory-scroll-wrapper {
+            flex-grow: 1; 
+            overflow-y: auto; 
+            
+            padding: 10px; 
+            background-color: transparent; 
+            border-radius: 8px; 
+            margin-top: 10px; 
+            
+            max-height: 300px; /* Increased max height */
+        }
+        
+        /* Media Query for Mobile/Tablet: Ensure height is fluid but capped */
+        @media (max-height: 700px) { 
+            .inventory-scroll-wrapper {
+                max-height: 30vh; 
+            }
+        }
+
+
+        .content-area h2 {
+            text-align: center;
+            margin-top: 0; 
+            margin-bottom: 20px; 
+            font-size: 55px; 
+            line-height: 1;
+            color: var(--text-color); 
+        }
+
+        /* --- Input Form Styling --- */
+        .log-form label {
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 5px;
+            font-size: 18px; 
+            color: var(--text-color);
+            font-family: 'Helvetica Neue', 'Arial', sans-serif; 
+        }
+
+        /* Input and Select Fields - Transparent background, White outline, White text */
+        .log-form input[type="text"], 
+        .log-form input[type="date"], 
+        .log-form input[type="number"], 
+        .log-form select {
+            width: 100%;
+            padding: 10px;
+            background-color: transparent; /* Make background transparent */
+            border: 1px solid var(--text-color); /* Set border to white (default) */
+            color: var(--text-color); /* Set input text color to white */
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            box-sizing: border-box;
+            border-radius: 5px;
+            filter: none; 
+            transition: border-color 0.3s ease-in-out; /* Added transition for smooth color change */
+        }
+        
+        /* NEW: Invalid Input Styling (Red Border) */
+        .log-form input.invalid-input,
+        .log-form select.invalid-input {
+            border-color: var(--error-color) !important;
+        }
+
+        /* Hide default arrows for Chrome/Safari on number input */
+        input[type=number]::-webkit-outer-spin-button,
+        input[type=number]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        /* Hide default arrows for Firefox on number input */
+        input[type=number] {
+            -moz-appearance: textfield; 
+        }
+
+        /* Style for SELECT elements (Ensuring appearance:none is kept) */
+        .log-form select {
+            appearance: none; 
+        }
+
+        .log-form input[type="date"] {
+             padding-right: 10px; 
+             direction: ltr;
+        }
+        
+        /* --- Save Log Entry Button Styling (Pill-shaped, White outline, matches BG color) */
+        .log-form button:not(.qty-controls button) {
+            display: block;
+            width: 100%;
+            padding: 15px 20px; /* Bigger padding for size */
+            margin-top: 30px;
+            border-radius: 50px; /* Pill shape */
+            
+            /* Color requirements (Default state) */
+            background-color: var(--bg-color); /* Matches page background */
+            border: 2px solid var(--text-color); /* White outline */
+            color: var(--text-color); /* White text */
+            
+            /* Text style */
+            font-weight: 700;
+            font-size: 20px; /* Larger text */
+            text-transform: uppercase;
+            cursor: pointer;
+            
+            /* Added for icon animation */
+            position: relative; 
+            overflow: hidden; 
+            transition: all 0.2s ease-in-out, background-color 0.3s, border-color 0.3s;
+        }
+        
+        /* Success and Error States for the Button */
+        .log-form button.success-state {
+            background-color: var(--success-color) !important;
+            border-color: var(--success-color) !important;
+        }
+
+        .log-form button.error-state {
+            background-color: var(--error-color) !important;
+            border-color: var(--error-color) !important;
+        }
+        
+        .log-form button:not(.qty-controls button):hover:not(:disabled) {
+            background-color: rgba(255, 255, 255, 0.1); /* Subtle hover effect */
+        }
+        
+        .log-form button:disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        /* Button Text Container */
+        #save-button-text {
+            display: block;
+            transition: opacity 0.3s; /* Fade out the text */
+        }
+
+        /* Icon Placeholder */
+        #save-button-icon {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0; /* Hidden by default */
+            transition: all 0.3s ease-in-out; /* For general fade-in/out */
+        }
+
+        /* NEW: Container for icon and message to allow sliding */
+        #save-icon-content {
+            display: flex;
+            align-items: center;
+            justify-content: center; /* Center content initially */
+            width: 100%;
+            height: 100%;
+            position: relative; 
+            transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
+        }
+        
+        /* Icon and Text Styling */
+        #feedback-icon svg {
+             width: 40px; 
+             height: 40px;
+             stroke: var(--text-color);
+             stroke-width: 2.5;
+             transition: transform 0.3s ease-in-out; /* For scaling animation */
+        }
+        
+        #feedback-message {
+            color: var(--text-color);
+            font-size: 18px;
+            font-weight: bold;
+            text-transform: none; /* Keep text case as defined */
+            margin-left: 10px; /* Space between icon and text */
+            opacity: 0;
+            white-space: nowrap; /* Prevent wrapping */
+            transform: translateX(10px); /* Initial offset for fade in */
+            transition: opacity 0.3s ease-in-out, transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.1s; 
+        }
+        
+        /* Scaling Classes */
+        .icon-scale-up {
+            transform: scale(1.3) !important; /* Larger size */
+        }
+        .icon-scale-down {
+            transform: scale(1) !important; /* Back to normal size */
+        }
+        /* --- END Button Animation Styling --- */
+
+
+        /* --- NEW STYLES FOR 50/50 SPLIT AND BOX PICKERS --- */
+        .flex-row { 
+            display: flex; 
+            justify-content: space-between; 
+            gap: 15px; 
+        }
+        .flex-col { 
+            flex: 1; 
+            min-width: 0; 
+        } 
+        .box-pickers { 
+            display: flex; 
+            gap: 5px; 
+        }
+        .box-pickers select { 
+            flex: 1; 
+        }
+        /* Style for disabled (allocated) options */
+        option:disabled { 
+            background-color: #374151; 
+            color: #9ca3af; 
+            filter: none; 
+        }
+        
+        /* --- QUANTITY CONTROL WRAPPER (Base) --- */
+        .quantity-control-wrapper {
+            position: relative;
+        }
+
+        /* Base input style */
+        .quantity-control-wrapper input[type="number"] {
+            padding-right: 70px; /* Make space for the horizontal controls */
+        }
+        
+        /* --- HORIZONTAL QUANTITY PILL CONTROL (Cleaned up for SVG use) --- */
+        .qty-controls.qty-horizontal {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: row;
+            width: 60px;
+            height: 26px;
+            background: var(--text-color);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 0 5px rgba(0,0,0,0.4);
+        }
+
+        .qty-horizontal .qty-btn {
+            all: unset; /* Important: removes default button styling */
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+        }
+        
+        /* Style the SVG inside the button */
+        .qty-horizontal .qty-btn svg {
+            width: 16px; /* Slightly larger icons */
+            height: 16px;
+            stroke-width: 2.5; /* Good weight for visibility */
+            color: var(--bg-color); /* Matches main background color */
+        }
+        
+        .qty-horizontal .qty-btn:active {
+            background: #e0e0e0;
+            transform: scale(0.95); /* Add active press effect */
+        }
+
+        .qty-horizontal .left {
+            border-right: 1px solid rgba(0,0,0,0.15);
+        }
+        /* --- END HORIZONTAL QUANTITY PILL CONTROL --- */
+               
+        /* --- Inventory List Styling --- */
+        .inventory-list {
+            list-style: none;
+            padding: 0;
+            display: flex; 
+            flex-direction: column;
+            margin-top: 0; 
+        }
+        
+        /* Inventory Header Row - 7 Columns (fixed above the scroll area) */
+        .inventory-header {
+            display: grid;
+            /* 7 Columns: Box, Item, Logged, Expiry, Time, Condition, Delete Button */
+            grid-template-columns: 1fr 2fr 1.25fr 1.25fr 1.75fr 1.5fr 0.75fr; 
+            padding: 10px 5px;
+            border-bottom: 2px solid var(--text-color); 
+            font-weight: bold;
+            font-size: 14px;
+            color: var(--text-color);
+            align-items: center; 
+            flex-shrink: 0; 
+        }
+        
+        .inventory-header span {
+            text-align: center;
+        }
+        
+        /* --- Inventory List Item Styling (7 Columns) --- */
+        .inventory-list li {
+            display: grid;
+            /* 7 Columns: Box, Item, Logged, Expiry, Time, Condition, Delete Button */
+            grid-template-columns: 1fr 2fr 1.25fr 1.25fr 1.75fr 1.5fr 0.75fr; 
+            padding: 8px 5px; 
+            border-bottom: 1px dashed var(--secondary-text);
+            font-size: 13px; 
+            align-items: center;
+            
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out, transform 0.2s ease-out; 
+        }
+        
+        .inventory-list li span {
+             color: var(--text-color); 
+             overflow: hidden;
+             text-overflow: ellipsis;
+             white-space: nowrap;
+        }
+        
+        /* Aligning data columns: Exclude ONLY Item Name (2nd child). This centers Box ID. */
+        .inventory-list li span:not(:nth-child(2)) {
+            text-align: center;
+        }
+
+        .inventory-list li span:first-child {
+            color: var(--secondary-text); 
+        }
+        
+        /* --- CONDITIONAL COLOR STYLES (Verified) --- */
+        .condition-color {
+            font-weight: bold;
+        }
+
+        /* Green - Fresh (Uses --success-color: #00CC44) */
+        .inventory-list .fresh-color {
+            color: var(--success-color); 
+        }
+
+        /* Blue - Going Bad (Uses --going-bad-color: #33AADD) */
+        .inventory-list .going-bad-color {
+            color: var(--going-bad-color); 
+        }
+
+        /* Red - Expired (Uses --error-color: #CC0000) */
+        .inventory-list .expired-color {
+            color: var(--error-color); 
+        }
+        
+        /* --- Search UI Styling (omitted for brevity) --- */
+        .search-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 15px auto 15px auto; /* Reduced margin */
+            width: 100%;
+            max-width: 450px;
+            position: relative; 
+            flex-shrink: 0; 
+        }
+
+        #search-toggle {
+            background: #AAAAAA;
+            color: var(--selected-text);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease-in-out;
+            position: absolute; 
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        /* SVG Icon Styling for Magnifying Glass */
+        #search-toggle svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--selected-text);
+        }
+
+        .search-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            overflow: hidden;
+            height: 0; 
+            width: 50px; 
+            padding: 0;
+            opacity: 0;
+            transition: all 0.3s ease-in-out, width 0.3s ease-in-out;
+            border-radius: 50px; 
+            background-color: #AAAAAA;
+            position: relative; 
+            z-index: 5;
+            border: 1px solid var(--secondary-text); 
+        }
+
+        .search-bar.expanded {
+            height: 40px; 
+            width: 100%; 
+            padding: 5px 15px; 
+            opacity: 1;
+        }
+
+        #search-input, #search-column {
+            background: transparent;
+            border: none;
+            color: var(--selected-text);
+            padding: 5px 10px;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+        }
+
+        #search-input {
+            flex-grow: 1;
+            border-right: 1px solid var(--secondary-text); 
+        }
+
+        #search-column {
+            width: 120px;
+            cursor: pointer;
+        }
+
+        #search-column option {
+            background-color: #AAAAAA; 
+            color: var(--selected-text);
+        }
+        
+        /* --- Menu Section (omitted for brevity) --- */
+        .menu-wrapper {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-shrink: 0; 
+        }
+        
+        .dial-container {
+            width: 60%;
+            display: flex;
+            justify-content: space-around;
+            position: relative;
+            border-top: 1px solid var(--secondary-text);
+            border-bottom: 1px solid var(--secondary-text);
+            padding: 10px 0;
+        }
+
+        .dial-segment {
+            padding: 5px 15px;
+            font-size: 20px;
+            cursor: pointer;
+            transition: color 0.1s, transform 0.1s, text-shadow 0.3s; 
+            text-align: center;
+            color: var(--secondary-text); 
+        }
+
+        .dial-segment.selected {
+            color: var(--text-color);
+            font-weight: bold;
+            transform: scale(1.1);
+            border-bottom: 2px solid var(--text-color); 
+            text-shadow: 0 0 5px var(--text-color), 0 0 10px var(--new-item-color);
+        }
+
+        .selected-option-corner {
+            align-self: flex-end;
+            margin-top: 20px;
+            font-size: 14px;
+            color: var(--text-color);
+            border: 1px solid var(--text-color);
+            border-radius: 5px;
+            padding: 5px 10px;
+        }
+        
+        /* --- NEW: Clear All Button and Container Styling --- */
+        #inventory-controls {
+            display: flex;
+            justify-content: flex-end; /* Push button to the right */
+            padding: 0 5px 10px 5px;
+        }
+
+        #clear-all-btn {
+            padding: 8px 15px;
+            background-color: var(--error-color); /* Red background for caution */
+            border: 2px solid var(--error-color);
+            color: var(--text-color);
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s, opacity 0.2s;
+            text-transform: uppercase;
+        }
+
+        #clear-all-btn:hover {
+            opacity: 0.8;
+        }
+        
+        /* --- NEW: Delete Button Styling in List --- */
+        .delete-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            transition: transform 0.1s;
+        }
+
+        .delete-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .delete-btn svg {
+            width: 18px; /* Slightly smaller icon to fit the column */
+            height: 18px;
+            fill: var(--error-color); /* Red color for delete icon */
+            transition: fill 0.2s;
+        }
+
+        .delete-btn:hover svg {
+            fill: #FF5555;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div id="main-menu-title">
+            <span class="title-the">That</span>
+            <span class="title-main">Inventory</span>
+            <span class="title-menu">Manager.</span>
+        </div>
+        <div class="clock-container">
+            <span class="clock-label">Time</span>
+            <div id="time-wrapper" onclick="toggleTimeFormat()">
+                <span id="time">00:00:00</span>
+                <span id="time-of-day-text"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-area">
+        
+        <div id="log-item-content" class="log-form" style="display: block;">
+            <div class="pulsing-plus" id="pulsing-plus-icon">+</div>
+            <h2>new item.</h2>
+            <form id="item-form">
+                <label for="item-name">Item Name</label>
+                <input type="text" id="item-name" name="name" required>
+
+                <div class="flex-row">
+                    <div class="flex-col">
+                        <label for="box-letter">Box ID</label>
+                        <div class="box-pickers">
+                            <select id="box-letter" name="box_letter" required></select>
+                            <select id="box-number" name="box_number" required></select>
+                        </div>
+                    </div>
+                    
+                    <div class="flex-col">
+                        <label for="item-qty">Quantity</label>
+                        <div class="quantity-control-wrapper">
+                            <input type="number" id="item-qty" name="quantity" required min="1" value="1">
+                                <div class="qty-controls qty-horizontal">
+                                    <button type="button" class="qty-btn left" onclick="changeQuantity(1)">
+                                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M12 4V20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+                                            <path d="M4 12H20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    </button>
+                                    <button type="button" class="qty-btn right" onclick="changeQuantity(-1)">
+                                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M4 12H20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                        </div>
+                    </div>
+                </div>
+
+                <label for="item-expiry">Date Of Expiry</label>
+                <input type="date" id="item-expiry" name="expiry_date" required>
+
+                <button type="button" id="save-button" onclick="submitItem()">
+                    <span id="save-button-text">Save Log Entry</span>
+                    <div id="save-button-icon">
+                        <div id="save-icon-content">
+                            <span id="feedback-icon"></span> 
+                            <span id="feedback-message" class="error-message"></span>
+                        </div>
+                    </div>
+                </button>
+                </form>
+        </div>
+
+        <div id="view-inventory-content" class="inventory-view" style="display: none; opacity: 0;">
+            <div class="pulsing-equals">=</div>
+            <h2>inventory.</h2>
+            
+            <div id="inventory-controls">
+                <button id="clear-all-btn" onclick="clearAllLogs()">Clear All Logs</button>
+            </div>
+            
+            <div id="search-container" class="search-container">
+                <button id="search-toggle" onclick="toggleSearch(true)">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                    </svg>
+                </button>
+                <div id="search-bar" class="search-bar">
+                    <input type="text" id="search-input" placeholder="Search term..." oninput="applySearchFilter(50)" onfocus="this.select()">
+                    <select id="search-column" onchange="applySearchFilter(50)">
+                        <option value="name">Item Name</option>
+                        <option value="box_id">Box ID</option>
+                        <option value="expiry_date">Expiry Date</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="inventory-header">
+                <span>Box</span>
+                <span>Item</span>
+                <span>Date Logged</span>
+                <span>Date of Expiry</span>
+                <span>Time Remaining</span>
+                <span>Condition</span>
+                <span></span> </div>
+            <div class="inventory-scroll-wrapper">
+                <ul class="inventory-list" id="inventory-data">
+                    </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="menu-wrapper">
+        <div class="dial-container">
+            <div class="dial-segment selected" data-target="log-item-content" onclick="handleMenuClick(this)">new item.</div>
+            <div class="dial-segment" data-target="view-inventory-content" onclick="handleMenuClick(this)">inventory.</div>
+        </div>
+        <div class="selected-option-corner" id="selected-option-display">
+            new item.
+        </div>
+    </div>
+
+    <script>
+        // Global state variables
+        let inventoryInterval = null;
+        let isSearchExpanded = false;
+        let currentTimeOfDay = '';
+        let is24HourFormat = true; // Default to 24-hour format
+        let isAnimatingClock = false; // Animation lock
+        const transitionDuration = 200;
+        const UPDATE_INTERVAL_MS = 30000;
+        const SCRAMBLE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+=-[]{};:",./<>?|\\';
+
+        // NEW: Global Inventory State and Reserved Boxes
+        let currentInventory = []; 
+        // These boxes are hardcoded to be reserved and should never be offered for logging
+        const ALLOCATED_BOXES = ['A1', 'C5', 'G3', 'P9', 'Z2', 'J9']; 
+
+        // SVG Constants for Button Feedback
+        const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 12L9 17L20 6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        const CROSS_SVG = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+        /* --- DATE AND TIME LOGIC --- */
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        /**
+         * Returns a date string in YYYY-MM-DD format based on an offset from today.
+         * @param {number} daysOffset
+         * @returns {string} Date string (YYYY-MM-DD)
+         */
+        const getDateString = (daysOffset) => {
+            const d = new Date();
+            d.setDate(d.getDate() + daysOffset);
+            return d.toISOString().split('T')[0];
+        };
+
+        /**
+         * Formats a YYYY-MM-DD date string to DD/MM/YYYY.
+         * @param {string} dateStr
+         * @returns {string} Formatted date string (DD/MM/YYYY)
+         */
+        function formatDateForDisplay(dateStr) {
+            if (!dateStr || dateStr === 'N/A') return 'N/A';
+            const parts = dateStr.split('-');
+            if (parts.length === 3) {
+                // Return DD/MM/YYYY
+                return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+            return dateStr;
+        }
+
+        /* --- INITIALIZATION --- */
+        document.addEventListener('DOMContentLoaded', () => {
+            updateTime(true);
+            // Reverted to 1000ms interval for second-based updates
+            setInterval(() => updateTime(false), 1000); 
+
+            const initialSelection = document.querySelector('.dial-segment.selected');
+            if (initialSelection) {
+                handleMenuClick(initialSelection);
+            }
+
+            // Set today as the minimum for the expiry date picker
+            const expiryInput = document.getElementById('item-expiry');
+            expiryInput.min = getDateString(1); // Set minimum to tomorrow
+            
+            // NEW: Fetch initial data (will populate box pickers and set currentInventory)
+            fetchInventoryData(); 
+
+            // Start the interval for fetching new data and updating time remaining in the list
+            inventoryInterval = setInterval(() => {
+                // Only refresh data if the inventory view is currently visible
+                if (document.getElementById('view-inventory-content').style.display === 'block') {
+                    fetchInventoryData(); 
+                }
+            }, UPDATE_INTERVAL_MS);
+
+            // Handle quantity button clicks
+            document.querySelectorAll('.qty-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    // Extract the quantity change value from the onclick attribute
+                    const change = parseInt(event.currentTarget.getAttribute('onclick').match(/changeQuantity\((.*)\)/)[1]);
+                    changeQuantity(change);
+                    event.preventDefault(); // Prevent form submission or other default behavior
+                });
+            });
+
+            // Prevent form submission on enter
+            document.getElementById('item-form').addEventListener('keydown', function(event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    // If the input is not a quantity input, submit the form on Enter
+                    if (event.target.type !== 'number' || event.target.id !== 'item-qty') {
+                        submitItem();
+                    }
+                }
+            });
+
+        });
+        
+        /* --- CLOCK LOGIC --- */
+        /**
+         * Toggles the time display format between 24-hour and 12-hour.
+         */
+        function toggleTimeFormat() {
+            if (isAnimatingClock) return; // Prevent spamming clicks
+            is24HourFormat = !is24HourFormat;
+            
+            const timeDisplay = document.getElementById('time');
+            timeDisplay.classList.add('time-growing');
+            isAnimatingClock = true;
+            
+            // Wait for the animation to finish before updating and shrinking
+            setTimeout(() => {
+                updateTime(true); // Update with the new format
+                timeDisplay.classList.remove('time-growing');
+                isAnimatingClock = false;
+            }, 200);
+        }
+
+        /**
+         * Updates the time displayed on the clock.
+         * @param {boolean} forceUpdate - forces the update, used mainly for format toggling.
+         */
+        function updateTime(forceUpdate = false) {
+            const now = new Date();
+            let hours = now.getHours();
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
+            
+            let timeString;
+            let timeOfDayText = '';
+
+            if (is24HourFormat) {
+                timeString = `${hours.toString().padStart(2, '0')}:${minutes}:${seconds}`; 
+            } else {
+                const ampm = hours >= 12 ? 'PM' : 'AM';
+                hours = hours % 12;
+                hours = hours ? hours : 12; // The hour '0' should be '12'
+                timeString = `${hours.toString().padStart(2, '0')}:${minutes}:${seconds}`; 
+                timeOfDayText = ampm;
+            }
+
+            document.getElementById('time').textContent = timeString;
+            document.getElementById('time-of-day-text').textContent = timeOfDayText;
+            
+            // Apply color class based on time of day (24-hour format logic)
+            const timeElement = document.getElementById('time');
+            const currentHour = now.getHours();
+            
+            let newTimeOfDay = '';
+            let newColorClass = '';
+
+            // Only update the color class when the minute changes or when forced
+            if (now.getSeconds() === 0 || forceUpdate) {
+                if (currentHour >= 0 && currentHour < 5) {
+                    newTimeOfDay = 'MIDNIGHT';
+                    newColorClass = 'time-midnight';
+                } else if (currentHour >= 5 && currentHour < 12) {
+                    newTimeOfDay = 'DAY';
+                    newColorClass = 'time-day';
+                } else if (currentHour >= 12 && currentHour < 18) {
+                    newTimeOfDay = 'NOON';
+                    newColorClass = 'time-noon';
+                } else {
+                    newTimeOfDay = 'EVENING';
+                    newColorClass = 'time-evening';
+                }
+                
+                // Only update the class if it has changed to prevent unnecessary re-rendering
+                if (newTimeOfDay !== currentTimeOfDay || forceUpdate) {
+                    timeElement.className = ''; // Reset all classes
+                    timeElement.classList.add(newColorClass);
+                    currentTimeOfDay = newTimeOfDay;
+                }
+            }
+        }
+
+        /* --- MENU LOGIC (UPDATED FOR SEQUENTIAL FADE) --- */
+        /**
+         * Handles the click on a menu dial segment to switch views.
+         * @param {HTMLElement} element - The clicked dial segment.
+         */
+        function handleMenuClick(element) {
+            const targetId = element.getAttribute('data-target');
+            const segments = document.querySelectorAll('.dial-segment');
+            const contentAreas = document.querySelectorAll('.content-area > div');
+            const displayElement = document.getElementById('selected-option-display');
+
+            // Find the currently active content area
+            const currentActive = Array.from(contentAreas).find(area => area.style.display === 'block');
+            const targetArea = document.getElementById(targetId);
+
+            if (!targetArea || targetArea === currentActive) return;
+
+            // Update menu selection and display text immediately
+            segments.forEach(seg => seg.classList.remove('selected'));
+            element.classList.add('selected');
+            displayElement.textContent = element.textContent;
+
+            const transitionTime = 200; 
+
+            // 1. Start fade-out of the current area (if one exists)
+            if (currentActive) {
+                currentActive.style.opacity = '0';
+                
+                // 2. After fade-out time, switch display and start fade-in of target
+                setTimeout(() => {
+                    currentActive.style.display = 'none';
+
+                    targetArea.style.display = 'block';
+                    
+                    if (targetId === 'view-inventory-content') {
+                        // NEW: Fetch and display the inventory list on view switch
+                        fetchInventoryData(); 
+                        if (isSearchExpanded) {
+                            toggleSearch(false); 
+                        }
+                    } else if (targetId === 'log-item-content') {
+                        resetFormStyles();
+                        // NEW: Re-fetch data on returning to log form to update box picker allocation
+                        fetchInventoryData(); 
+                    }
+                    
+                    // 3. Start fade-in of the target area
+                    setTimeout(() => {
+                        targetArea.style.opacity = '1';
+                    }, 10);
+                    
+                }, transitionTime); 
+
+            } else {
+                // Initial load: just fade in the target
+                targetArea.style.display = 'block';
+                setTimeout(() => targetArea.style.opacity = '1', 10);
+            }
+        }
+        
+        /* --- QUANTITY CONTROL LOGIC --- */
+        /**
+         * Changes the quantity input value.
+         * @param {number} change - The amount to add or subtract (-1 or 1).
+         */
+        function changeQuantity(change) {
+            const qtyInput = document.getElementById('item-qty');
+            let currentValue = parseInt(qtyInput.value) || 1;
+            currentValue += change;
+            
+            // Ensure quantity is not less than the minimum (which is 1)
+            if (currentValue < 1) {
+                currentValue = 1;
+            }
+            
+            qtyInput.value = currentValue;
+        }
+
+        /* --- FORM VALIDATION & SUBMISSION --- */
+        /**
+         * Checks if the required form fields are valid.
+         * Applies 'invalid-input' class to invalid fields.
+         * @returns {boolean}
+         */
+        function validateForm() {
+            let isValid = true;
+            const form = document.getElementById('item-form');
+            const requiredInputs = form.querySelectorAll('input[required], select[required]');
+
+            requiredInputs.forEach(input => {
+                if (!input.value || (input.type === 'number' && parseInt(input.value) < 1)) {
+                    input.classList.add('invalid-input');
+                    isValid = false;
+                } else {
+                    input.classList.remove('invalid-input');
+                }
+            });
+            return isValid;
+        }
+
+        /**
+         * Resets the form and removes any invalid styling.
+         */
+        function resetFormStyles() {
+            document.getElementById('item-form').reset();
+            const invalidInputs = document.querySelectorAll('.invalid-input');
+            invalidInputs.forEach(input => input.classList.remove('invalid-input'));
+            // Re-apply minimum date
+            document.getElementById('item-expiry').min = getDateString(1);
+        }
+
+        /**
+         * Sends item data to the NodeMCU endpoint using a GET request with URL parameters.
+         * @param {Object} itemData - The data object to be sent.
+         * @returns {Promise<boolean>} Resolves to true on success (HTTP 2xx), rejects on error.
+         */
+        function sendDataToNodeMCU(itemData) {
+            // Prepare data for URL parameters, matching the expected NodeMCU GET parameters
+            const params = new URLSearchParams({
+                box: itemData.box_id, // Map to NodeMCU 'box'
+                name: itemData.name,
+                log_date: itemData.date_logged,
+                expiry: itemData.expiry_date // Map to NodeMCU 'expiry'
+            });
+
+            const url = `/logData?${params.toString()}`; 
+
+            // Perform the fetch request with a 5-second timeout
+            return fetch(url, {
+                method: 'GET', 
+                signal: AbortSignal.timeout(5000) 
+            })
+            .then(response => {
+                if (response.ok) {
+                    return true; // Success
+                } else {
+                    throw new Error(`Server responded with status: ${response.status} (${response.statusText}).`);
+                }
+            })
+            .catch(error => {
+                if (error.name === 'AbortError') {
+                    throw new Error('Connection timed out after 5 seconds. NodeMCU is unreachable.');
+                } else if (error.message.includes('Failed to fetch')) {
+                    throw new Error('Network error. Check NodeMCU Wi-Fi status.');
+                } else {
+                    throw error;
+                }
+            });
+        }
+
+
+        /**
+         * Handles the main logic for submitting a new item.
+         */
+        function submitItem() {
+            if (!validateForm()) {
+                animateButtonFeedback(false, 'validation', 'Please check highlighted fields.');
+                return;
+            }
+
+            // Temporarily extract data to be logged (before resetting the form)
+            const boxLetter = document.getElementById('box-letter').value;
+            const boxNumber = document.getElementById('box-number').value;
+            const newItem = {
+                box_id: boxLetter + boxNumber,
+                name: document.getElementById('item-name').value,
+                date_logged: getDateString(0),
+                expiry_date: document.getElementById('item-expiry').value,
+                quantity: parseInt(document.getElementById('item-qty').value)
+            };
+
+            sendDataToNodeMCU(newItem)
+                .then(success => {
+                    // API Success
+                    animateButtonFeedback(true, 'success');
+                    
+                    // Reset form fields
+                    resetFormStyles();
+
+                    // NEW: Fetch all data to update the inventory list and box pickers
+                    fetchInventoryData();
+
+                })
+                .catch(error => {
+                    animateButtonFeedback(false, 'network', `Data Log Failed: ${error.message}`);
+                    console.error('Data logging failed:', error);
+                });
+        }
+        
+        /* --- Button Animation Feedback Logic --- */
+        /**
+         * Drives the animated feedback sequence for the save button.
+         * @param {boolean} isSuccess - True for success (green check), false for error (red cross).
+         */
+        function animateButtonFeedback(isSuccess, errorType = 'validation', extraInfo = '') {
+            const saveButton = document.getElementById('save-button');
+            const buttonText = document.getElementById('save-button-text');
+            const buttonIconContainer = document.getElementById('save-button-icon');
+            const feedbackIcon = document.getElementById('feedback-icon');
+            const iconContentWrapper = document.getElementById('save-icon-content');
+            const pulsingPlus = document.getElementById('pulsing-plus-icon');
+            
+            // Icon and Button setup
+            const iconSVG = isSuccess ? CHECK_SVG : CROSS_SVG;
+            const buttonClass = isSuccess ? 'success-state' : 'error-state';
+
+            // 1. Initial State Setup
+            saveButton.disabled = true;
+            saveButton.classList.add(buttonClass);
+            buttonText.style.opacity = '0';
+            
+            // Set icon HTML (MUST happen before querying the SVG inside)
+            feedbackIcon.innerHTML = iconSVG;
+            
+            const svgIcon = feedbackIcon.querySelector('svg'); 
+            
+            if (svgIcon && !isSuccess) {
+                svgIcon.style.stroke = 'var(--text-color)'; 
+            }
+
+            const finalCleanup = () => {
+                saveButton.disabled = false;
+                saveButton.classList.remove('success-state', 'error-state');
+                buttonText.style.opacity = '1'; // Fade text back in
+                
+                buttonIconContainer.style.opacity = '0'; 
+                iconContentWrapper.classList.remove('network-error'); 
+                
+                if (svgIcon) {
+                    svgIcon.classList.remove('icon-scale-up', 'icon-scale-down');
+                }
+                pulsingPlus.classList.remove('rotated');
+            };
+
+            // Wait for text fade-out (300ms)
+            setTimeout(() => {
+                // Step 2. Fade in icon (centered) and scale up
+                buttonIconContainer.style.opacity = '1';
+                
+                if (svgIcon) { 
+                    svgIcon.classList.remove('icon-scale-up', 'icon-scale-down');
+                    svgIcon.classList.add('icon-scale-up'); 
+                }
+
+                if (isSuccess) {
+                    pulsingPlus.classList.add('rotated');
+                }
+
+                const DISPLAY_DURATION_MS = isSuccess ? 1800 : 1500; 
+                
+                // Wait for the icon to be displayed clearly 
+                setTimeout(() => {
+                    // Step 3. Scale Down
+                    if (svgIcon) {
+                        svgIcon.classList.remove('icon-scale-up');
+                        svgIcon.classList.add('icon-scale-down'); 
+                    }
+                    
+                    // Final fade out and reset (Wait for scale down to finish: 400ms)
+                    setTimeout(finalCleanup, 400); 
+                    
+                }, DISPLAY_DURATION_MS);
+
+            }, 300); // Wait for text fade-out
+        }
+        
+        /* --- DATA FETCHING & INVENTORY LIST LOGIC --- */
+        
+        /**
+         * Fetches inventory data from the NodeMCU, updates the global state,
+         * and refreshes the UI components that rely on the data.
+         */
+        async function fetchInventoryData() {
+            const listElement = document.getElementById('inventory-data');
+            // Show a loading message
+            if (document.getElementById('view-inventory-content').style.display === 'block') {
+                 listElement.innerHTML = '<li><span style="grid-column: 1 / span 7; color: var(--secondary-text); text-align: center;">LOADING INVENTORY...</span></li>';
+            }
+
+            try {
+                // NodeMCU endpoint for inventory data
+                const response = await fetch('/inventory', { signal: AbortSignal.timeout(5000) });
+                if (!response.ok) {
+                    throw new Error(`HTTP status ${response.status}`);
+                }
+                
+                // The response body must be a JSON array of item objects
+                const data = await response.json(); 
+                
+                // Update global source of truth
+                currentInventory = data; 
+                
+                // Refresh UI components
+                populateBoxPickers(currentInventory);
+                
+                // Only render the list if the inventory view is currently visible
+                if (document.getElementById('view-inventory-content').style.display === 'block') {
+                     renderInventoryList(currentInventory); 
+                }
+
+            } catch (error) {
+                console.error('Failed to fetch inventory:', error);
+                // Display a network error message if the inventory view is active
+                if (document.getElementById('view-inventory-content').style.display === 'block') {
+                     listElement.innerHTML = '<li><span style="grid-column: 1 / span 7; color: var(--error-color); text-align: center;">ERROR: Failed to load data from NodeMCU. Check connection.</span></li>';
+                }
+            }
+        }
+        
+        /**
+         * Calculates the days remaining between today and the expiry date.
+         * @param {string} expiryDateStr - Date string in YYYY-MM-DD format.
+         * @returns {number} Days remaining. Negative means expired.
+         */
+        function calculateDaysRemaining(expiryDateStr) {
+            if (!expiryDateStr) return Infinity; // No expiry date means "never expires"
+            
+            const expiryDate = new Date(expiryDateStr);
+            // Ensure comparison is day-to-day by setting hours to midnight
+            expiryDate.setHours(0, 0, 0, 0); 
+            
+            const timeDifference = expiryDate.getTime() - today.getTime();
+            const dayDifference = Math.ceil(timeDifference / (1000 * 60 * 60 * 24));
+            
+            return dayDifference;
+        }
+
+        /**
+         * Determines the text and CSS class for the item's condition.
+         * @param {string} expiryDateStr - Date string in YYYY-MM-DD format.
+         * @returns {{remainingText: string, conditionText: string, className: string}}
+         */
+        function getConditionClassAndText(expiryDateStr) {
+            const days = calculateDaysRemaining(expiryDateStr);
+            let conditionText = '';
+            let className = '';
+            let remainingText = '';
+
+            if (days < 0) {
+                conditionText = 'EXPIRED';
+                className = 'expired-color';
+                remainingText = Math.abs(days) + ' days ago';
+            } else if (days <= 7) {
+                conditionText = 'GOING BAD';
+                className = 'going-bad-color';
+                remainingText = days === 0 ? 'Today' : days + ' days';
+            } else {
+                conditionText = 'FRESH';
+                className = 'fresh-color';
+                remainingText = days + ' days';
+            }
+            
+            return { remainingText, conditionText, className };
+        }
+
+        /**
+         * Renders the inventory list based on the current data and search filter.
+         * @param {Array<Object>} data - The full inventory data array.
+         */
+        function renderInventoryList(data) {
+             const listElement = document.getElementById('inventory-data');
+             const searchInput = document.getElementById('search-input');
+             const searchColumn = document.getElementById('search-column');
+             const searchTerm = searchInput.value.toLowerCase().trim();
+             const searchKey = searchColumn.value;
+             const staggerDelay = 5; // milliseconds
+
+             // 1. Apply Filter
+             const filteredData = data.filter(item => {
+                 if (!searchTerm) return true;
+
+                 let itemValue = '';
+                 
+                 // Handle the special case where the search key is box_id but the item data is split
+                 if (searchKey === 'box_id') {
+                     // Check against the full box ID
+                     itemValue = item.box_id ? item.box_id.toLowerCase() : '';
+                 } else if (searchKey === 'expiry_date') {
+                     // For date, search against both the YYYY-MM-DD and the DD/MM/YYYY display format
+                     const ymd = item.expiry_date ? item.expiry_date.toLowerCase() : '';
+                     const dmy = formatDateForDisplay(item.expiry_date).toLowerCase();
+                     return ymd.includes(searchTerm) || dmy.includes(searchTerm);
+                 } else {
+                     itemValue = item[searchKey] ? item[searchKey].toString().toLowerCase() : '';
+                 }
+                 
+                 // Simple text search
+                 return itemValue.includes(searchTerm);
+             });
+             
+             // 2. Sort Data (Sort by Time Remaining, Ascending)
+             const sortedData = filteredData.sort((a, b) => {
+                 const diffA = calculateDaysRemaining(a.expiry_date);
+                 const diffB = calculateDaysRemaining(b.expiry_date);
+                 return diffA - diffB;
+             });
+             
+             listElement.innerHTML = '';
+             
+             if (sortedData.length === 0) {
+                 listElement.innerHTML = '<li><span style="grid-column: 1 / span 7; text-align: center;">NO MATCHING ITEMS FOUND.</span></li>';
+                 return;
+             }
+             
+             sortedData.forEach((item, index) => {
+                 // Dates are formatted DD/MM/YYYY here
+                 const expiryDisplay = formatDateForDisplay(item.expiry_date);
+                 const dateLoggedDisplay = formatDateForDisplay(item.date_logged);
+                 
+                 const { remainingText, conditionText, className } = getConditionClassAndText(item.expiry_date);
+
+                 const li = document.createElement('li');
+                 
+                 li.innerHTML = `
+                     <span>${item.box_id}</span> 
+                     <span>${item.name}</span> 
+                     <span>${dateLoggedDisplay}</span> 
+                     <span>${expiryDisplay}</span> 
+                     <span>${remainingText}</span> 
+                     <span class="condition-color ${className}">${conditionText}</span>
+                     <span>
+                        <button class="delete-btn" onclick="deleteItem('${item.box_id}')">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                            </svg>
+                        </button>
+                     </span>
+                 `;
+                 listElement.appendChild(li);
+                 
+                 setTimeout(() => {
+                     li.style.opacity = '1';
+                 }, index * staggerDelay);
+             });
+        }
+        
+        /**
+         * Debounces the search filter application.
+         * @param {number} delay - The debounce delay in milliseconds.
+         */
+        let searchTimeout;
+        function applySearchFilter(delay) {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                // Renders based on the globally held currentInventory
+                renderInventoryList(currentInventory); 
+            }, delay);
+        }
+
+        /* --- BOX PICKER LOGIC --- */
+        
+        /**
+         * Populates the box letter and number dropdowns.
+         * It disables box combinations that are already allocated in inventoryData.
+         * @param {Array<Object>} inventoryData - The current inventory items (from server).
+         */
+        function populateBoxPickers(inventoryData = []) {
+            const letterSelect = document.getElementById('box-letter');
+            const numberSelect = document.getElementById('box-number');
+            
+            // Store selected values to maintain them if possible
+            const selectedLetter = letterSelect.value;
+            const selectedNumber = numberSelect.value;
+
+            // Clear existing options, but ensure the first one is the prompt
+            letterSelect.innerHTML = '<option value="" disabled selected>Letter</option>';
+            numberSelect.innerHTML = '<option value="" disabled selected>Number</option>';
+            
+            // Get currently allocated box IDs from the fetched inventory and the hardcoded reserved list
+            const currentAllocatedBoxes = inventoryData.map(item => item.box_id);
+            const allAllocatedBoxes = [...new Set([...currentAllocatedBoxes, ...ALLOCATED_BOXES])];
+
+            const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+            const numbers = Array.from({length: 10}, (_, i) => i); // 0 to 9
+
+            letters.forEach(letter => {
+                const opt = document.createElement('option');
+                opt.value = letter;
+                opt.textContent = letter;
+                letterSelect.appendChild(opt);
+            });
+            
+            // Restore selection if available
+            if (letters.includes(selectedLetter)) {
+                letterSelect.value = selectedLetter;
+            } else {
+                 letterSelect.value = "";
+            }
+
+
+            const updateNumberOptions = () => {
+                const currentLetter = letterSelect.value;
+                numberSelect.innerHTML = '<option value="" disabled selected>Number</option>';
+                
+                numbers.forEach(num => {
+                    const fullId = currentLetter + num;
+                    const isAllocated = allAllocatedBoxes.includes(fullId);
+                    
+                    const opt = document.createElement('option');
+                    opt.value = num;
+                    opt.textContent = num;
+                    opt.disabled = isAllocated;
+                    
+                    if (isAllocated) {
+                         opt.title = `Box ${fullId} is already in use.`;
+                    }
+                    
+                    numberSelect.appendChild(opt);
+                });
+                
+                // Restore number selection if it's still available (not allocated)
+                const targetOption = numberSelect.querySelector(`option[value="${selectedNumber}"]`);
+                if (targetOption && !targetOption.disabled) {
+                    numberSelect.value = selectedNumber;
+                } else {
+                    numberSelect.value = "";
+                }
+            };
+            
+            // Re-bind the change listener (in case it was cleared by innerHTML)
+            letterSelect.removeEventListener('change', updateNumberOptions); 
+            letterSelect.addEventListener('change', updateNumberOptions);
+            
+            // Initial call to populate numbers based on initial/restored letter
+            updateNumberOptions();
+        }
+
+        /* --- SEARCH LOGIC --- */
+        
+        /**
+         * Toggles the search bar expansion.
+         * @param {boolean} fromToggle - True if triggered by the button click.
+         */
+        function toggleSearch(fromToggle) {
+            const searchBar = document.getElementById('search-bar');
+            const searchInput = document.getElementById('search-input');
+            const searchToggle = document.getElementById('search-toggle');
+
+            if (fromToggle) {
+                isSearchExpanded = !isSearchExpanded;
+            } else {
+                // When called with fromToggle=false (e.g., from menu switch), always collapse
+                isSearchExpanded = false;
+            }
+
+            if (isSearchExpanded) {
+                searchBar.classList.add('expanded');
+                searchToggle.style.opacity = '0';
+                setTimeout(() => {
+                    searchToggle.style.display = 'none';
+                    searchInput.focus();
+                }, 300); // Match transition duration
+            } else {
+                searchBar.classList.remove('expanded');
+                searchInput.blur();
+                searchInput.value = '';
+                // Run filter to clear search results using the current inventory
+                renderInventoryList(currentInventory); 
+                
+                searchToggle.style.display = 'flex';
+                setTimeout(() => {
+                    searchToggle.style.opacity = '1';
+                }, 10);
+            }
+        }
+        
+        /* --- DELETE/CLEAR LOGIC (NEW) --- */
+        
+        /**
+         * Sends a request to clear all inventory logs, restarting the NodeMCU.
+         */
+        function clearAllLogs() {
+            if (!confirm("⚠️ WARNING: This will permanently DELETE ALL inventory logs and RESTART the device. Are you absolutely sure?")) {
+                return;
+            }
+
+            const endpoint = "/clearall";
+            fetch(endpoint)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.text();
+                })
+                .then(responseText => {
+                    // NodeMCU restarts immediately, but we display the success message
+                    alert(`All logs cleared. Device is now restarting. Please wait a few moments before refreshing the page.`);
+                    // Clear local data and re-render empty list
+                    currentInventory = [];
+                    renderInventoryList(currentInventory);
+                    populateBoxPickers(currentInventory);
+                })
+                .catch(error => {
+                    console.error('Clear All operation failed:', error);
+                    alert(`Failed to clear logs: ${error.message}. Check NodeMCU serial for details.`);
+                });
+        }
+        
+        /**
+         * Sends a request to delete a single item by box ID.
+         * @param {string} boxID - The ID of the box to delete (e.g., "A1").
+         */
+        function deleteItem(boxID) {
+            if (!confirm(`Are you sure you want to delete the entry for item in Box ${boxID}? This action is irreversible.`)) {
+                return;
+            }
+            
+            const endpoint = `/deleteItem?box_id=${boxID}`;
+            fetch(endpoint)
+                .then(response => {
+                    if (!response.ok) {
+                        // Throwing an error here will catch the 404/400 errors from the server
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.text();
+                })
+                .then(() => {
+                    alert(`Entry for Box ${boxID} successfully deleted.`);
+                    // Remove item from local currentInventory for immediate UI update
+                    const index = currentInventory.findIndex(item => item.box_id === boxID);
+                    if (index !== -1) {
+                        currentInventory.splice(index, 1);
+                    }
+                    // Re-render the list and update box pickers to reflect the change
+                    renderInventoryList(currentInventory);
+                    populateBoxPickers(currentInventory);
+                })
+                .catch(error => {
+                    console.error('Delete operation failed:', error);
+                    alert(`Failed to delete entry: ${error.message}. Check NodeMCU serial for details.`);
+                });
+        }
+    </script>
+
+</body>
+</html>
