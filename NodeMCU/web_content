@@ -1,0 +1,176 @@
+static const char HTML_CODE[] PROGMEM = R"====( 
+<!DOCTYPE html>
+<html>
+<head>
+<title>That Inventory Manager</title>
+<meta name=viewport content="width=device-width, initial-scale=1">
+<style>@import url('https://fonts.googleapis.com/css2?family=Michroma&family=Teko:wght@400;700&display=swap');:root{--bg-color:#485870;--text-color:#fff;--secondary-text:#aaa;--selected-text:#1a1a1a;--input-border:#999;--new-item-color:#7cb4ae;--time-initial-color:#1a1a1a;--success-color:#0c4;--error-color:#c00;--going-bad-color:#3ad}*:focus,*:active{outline:none!important;-webkit-tap-highlight-color:transparent}.inventory-scroll-wrapper::-webkit-scrollbar{width:8px;height:8px}.inventory-scroll-wrapper::-webkit-scrollbar-track{background:rgba(0,0,0,0.05);border-radius:10px;transition:background .2s ease-in-out}.inventory-scroll-wrapper:hover::-webkit-scrollbar-track{background:rgba(0,0,0,0.7)}.inventory-scroll-wrapper::-webkit-scrollbar-thumb{background-color:var(--text-color);border-radius:10px;border:2px solid rgba(0,0,0,0.1)}@keyframes fadeIn{from{opacity:0}to{opacity:1}}body{background-color:var(--bg-color);color:var(--text-color);font-family:'Helvetica Neue','Arial',sans-serif;margin:0;padding:20px;display:flex;flex-direction:column;min-height:10vh;animation:fadeIn .4s ease-out forwards}.header{display:grid;grid-template-columns:1fr auto;align-items:center;padding-bottom:30px;width:100%;flex-shrink:0}#main-menu-title{line-height:1;font-weight:bold;color:var(--text-color);font-family:'Courier New',monospace}#main-menu-title span{display:block}#main-menu-title .title-the{font-size:18px}#main-menu-title .title-main{font-size:50px}#main-menu-title .title-menu{font-size:70px}.clock-container{text-align:right;font-size:16px;padding-top:5px}#time-wrapper{position:relative;cursor:pointer;display:inline-block}.clock-label{color:black;display:block;margin-bottom:0;font-family:'Teko',sans-serif;font-size:30px;transition:color .5s ease-in-out}#time{display:block;font-size:40px;font-weight:bold;font-family:'Michroma',sans-serif;line-height:1;transition:color 3s ease-in-out,font-size .2s;color:var(--time-initial-color)}.time-growing{font-size:45px!important}#time-of-day-text{position:absolute;bottom:-30px;right:0;font-size:18px;font-family:'Courier New',monospace;min-height:18px;color:var(--text-color);font-weight:bold;transition:color .5s ease-in-out}.time-midnight{color:#00005e}.time-day{color:#00bda3}.time-noon{color:#c2c21b}.time-evening{color:#632d69}.time-night{color:#000}@keyframes msgFadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}.fade-in-message{animation:msgFadeIn .4s ease-out}@keyframes pulse-new-item{0%{filter:brightness(1)}50%{filter:brightness(1.4)}100%{filter:brightness(1)}}@keyframes rotate-success{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes oscillate-plus{from{transform:rotate(5deg)}to{transform:rotate(-5deg)}}.pulsing-plus{font-size:60px;font-weight:700;line-height:1;text-align:center;color:var(--new-item-color);margin-bottom:5px;animation:pulse-new-item 4s ease-in-out infinite,oscillate-plus 1s ease-in-out infinite alternate;transition:transform .3s ease-out}.pulsing-plus.rotated{animation:rotate-success .3s ease-out forwards}.pulsing-equals{font-size:60px;font-weight:700;line-height:1;text-align:center;color:#00bda3;margin-bottom:5px;animation:pulse-new-item 4s ease-in-out infinite,oscillate-plus 1s ease-in-out infinite alternate}.content-area{flex-grow:1;padding-bottom:20px;overflow-y:hidden;display:flex;justify-content:center;min-height:0}.log-form{width:100%;max-width:450px;transition:opacity .2s ease-in-out;opacity:1;display:flex;flex-direction:column}.inventory-view{width:100%;max-width:600px;transition:opacity .2s ease-in-out;display:flex;flex-direction:column;height:100%}.inventory-scroll-wrapper{flex-grow:1;overflow-y:auto;padding:10px;background-color:transparent;border-radius:8px;margin-top:10px;max-height:190px}@media(max-height:700px){.inventory-scroll-wrapper{max-height:30vh}}.content-area h2{text-align:center;margin-top:0;margin-bottom:20px;font-size:55px;line-height:1;color:var(--text-color)}.log-form label{display:block;margin-top:15px;margin-bottom:5px;font-size:18px;color:var(--text-color);font-family:'Helvetica Neue','Arial',sans-serif}.log-form input[type="text"],.log-form input[type="date"],.log-form input[type="number"],.log-form select{width:100%;padding:10px;background-color:transparent;border:1px solid var(--text-color);color:var(--text-color);font-family:'Courier New',monospace;font-size:14px;box-sizing:border-box;border-radius:5px;filter:none;transition:border-color .3s ease-in-out}.log-form input.invalid-input,.log-form select.invalid-input{border-color:var(--error-color)!important}input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}input[type=number]{-moz-appearance:textfield}.log-form select{appearance:none}.log-form input[type="date"]{padding-right:10px;direction:ltr}.log-form button:not(.qty-controls button){display:block;width:100%;padding:15px 20px;margin-top:30px;border-radius:50px;background-color:var(--bg-color);border:2px solid var(--text-color);color:var(--text-color);font-weight:700;font-size:20px;text-transform:uppercase;cursor:pointer;position:relative;overflow:hidden;transition:all .2s ease-in-out,background-color .3s,border-color .3s}.log-form button.success-state{background-color:var(--success-color)!important;border-color:var(--success-color)!important}.log-form button.error-state{background-color:var(--error-color)!important;border-color:var(--error-color)!important}.log-form button:not(.qty-controls button):hover:not(:disabled){background-color:rgba(255,255,255,0.1)}.log-form button:disabled{cursor:not-allowed;opacity:.7}#save-button-text{display:block;transition:opacity .3s}#save-button-icon{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;justify-content:center;align-items:center;opacity:0;transition:all .3s ease-in-out}#save-icon-content{display:flex;align-items:center;justify-content:center;width:100%;height:100%;position:relative;transition:transform .4s cubic-bezier(0.25,0.46,0.45,0.94)}#save-icon-content.network-error{transform:translateX(-25px)}#feedback-icon svg{width:40px;height:40px;stroke:var(--text-color);stroke-width:2.5;transition:transform .3s ease-in-out}#feedback-message{color:var(--text-color);font-size:18px;font-weight:bold;text-transform:none;margin-left:10px;opacity:0;white-space:nowrap;transform:translateX(10px);transition:opacity .3s ease-in-out,transform .4s cubic-bezier(0.25,0.46,0.45,0.94) .1s}#save-icon-content.network-error #feedback-message{opacity:1;transform:translateX(0);transition:opacity .3s ease-in-out .1s,transform .4s cubic-bezier(0.25,0.46,0.45,0.94) .1s}.icon-scale-up{transform:scale(1.3)!important}.icon-scale-down{transform:scale(1)!important}.flex-row{display:flex;justify-content:space-between;gap:15px}.flex-col{flex:1;min-width:0}.box-pickers{display:flex;gap:5px}.box-pickers select{flex:1}option:disabled{background-color:#374151;color:#9ca3af;filter:none}.quantity-control-wrapper{position:relative}.quantity-control-wrapper input[type="number"]{padding-right:70px}.qty-controls.qty-horizontal{position:absolute;right:5px;top:50%;transform:translateY(-50%);display:flex;flex-direction:row;width:60px;height:26px;background:var(--text-color);border-radius:20px;overflow:hidden;box-shadow:0 0 5px rgba(0,0,0,0.4)}.qty-horizontal .qty-btn{all:unset;flex:1;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s,transform .1s}.qty-horizontal .qty-btn svg{width:16px;height:16px;stroke-width:2.5;color:var(--bg-color)}.qty-horizontal .qty-btn:active{background:#e0e0e0;transform:scale(0.95)}.qty-horizontal .left{border-right:1px solid rgba(0,0,0,0.15)}.inventory-list{list-style:none;padding:0;display:flex;flex-direction:column;margin-top:0}.inventory-header{display:grid;grid-template-columns:1fr 2fr 1.25fr 1.25fr 1.75fr 1.5fr;padding:10px 5px;border-bottom:2px solid var(--text-color);font-weight:bold;font-size:14px;color:var(--text-color);align-items:center;flex-shrink:0}.inventory-header span{text-align:center}.inventory-list li{display:grid;grid-template-columns:1fr 2fr 1.25fr 1.25fr 1.75fr 1.5fr;padding:8px 5px;border-bottom:1px dashed var(--secondary-text);font-size:13px;align-items:center;opacity:0;transition:opacity .05s ease-in-out}.inventory-list li span{color:var(--text-color);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.inventory-list li span:not(:nth-child(2)){text-align:center}.inventory-list li span:first-child{color:var(--secondary-text)}.condition-color{font-weight:bold}.inventory-list .fresh-color{color:var(--success-color)}.inventory-list .going-bad-color{color:var(--going-bad-color)}.inventory-list .expired-color{color:var(--error-color)}.inventory-list .warning-color{color:#ffc000}.inventory-footer{margin-top:auto;padding-top:10px;border-top:1px solid var(--secondary-text);text-align:center;font-size:12px;color:var(--secondary-text);flex-shrink:0}.search-container{display:flex;justify-content:flex-end;align-items:center;height:40px;margin-bottom:15px;flex-shrink:0}#search-toggle{all:unset;cursor:pointer;width:40px;height:40px;display:flex;align-items:center;justify-content:center;background-color:var(--secondary-text);border-radius:50px;transition:opacity .3s ease-in-out;flex-shrink:0}#search-toggle svg{width:24px;height:24px;fill:var(--selected-text)}.search-bar{display:flex;justify-content:space-between;align-items:center;overflow:hidden;height:0;width:50px;padding:0;opacity:0;transition:all .3s ease-in-out,width .3s ease-in-out;border-radius:50px;background-color:#aaa;position:relative;z-index:5;border:1px solid var(--secondary-text)}.search-bar.expanded{height:40px;width:100%;padding:5px 15px;opacity:1}#search-input,#search-column{background:transparent;border:0;color:var(--selected-text);padding:5px 10px;font-size:14px;font-family:'Courier New',monospace}#search-input{flex-grow:1;border-right:1px solid var(--secondary-text)}#search-column{width:120px;cursor:pointer}#search-column option{background-color:#aaa;color:var(--selected-text)}.menu-wrapper{width:100%;display:flex;flex-direction:column;align-items:center;flex-shrink:0}.dial-container{width:60%;display:flex;justify-content:space-around;position:relative;border-top:1px solid var(--secondary-text);border-bottom:1px solid var(--secondary-text);padding:10px 0}.dial-segment{padding:5px 15px;font-size:20px;cursor:pointer;transition:color .1s,transform .1s,text-shadow .3s;text-align:center;color:var(--secondary-text)}.dial-segment.selected{color:var(--text-color);font-weight:bold;text-shadow:0 0 5px rgba(255,255,255,0.5)}.dial-segment:hover{color:var(--text-color);transform:scale(1.05)}.clear-inventory-btn{display:block;width:100%;padding:10px 20px!important;margin-top:20px;border-radius:5px!important;background-color:transparent!important;border:2px solid var(--error-color)!important;color:var(--error-color)!important;font-weight:700;font-size:16px!important;text-transform:uppercase;cursor:pointer;transition:all .2s ease-in-out}.clear-inventory-btn:hover:not(:disabled){background-color:rgba(204,0,0,0.1)!important}</style>
+</head>
+<body>
+<div class=header>
+<div id=main-menu-title>
+<span class=title-the>That</span>
+<span class=title-main>Inventory</span>
+<span class=title-menu>Manager</span>
+</div>
+<div class=clock-container>
+<span class=clock-label id=selected-option-display>LOG ITEM</span>
+<div id=time-wrapper onclick=toggleTimeFormat()>
+<span id=time class=time-night>12:00</span>
+<span id=time-of-day-text>AM/PM</span>
+</div>
+</div>
+</div>
+<div class=menu-wrapper>
+<div class=dial-container>
+<div class="dial-segment selected" data-target=view-log-item-content>LOG ITEM</div>
+<div class=dial-segment data-target=view-inventory-content>INVENTORY</div>
+</div>
+</div>
+<div class=content-area>
+<div id=view-log-item-content class=log-form style=opacity:1;display:flex>
+<div class=pulsing-plus>+</div>
+<h2>log_item.</h2>
+<form id=item-form>
+<label for=item-name>Item Name</label>
+<input type=text id=item-name placeholder="E.g., Apples, Milk, Deli Meat" required>
+<div class=flex-row>
+<div class=flex-col>
+<label for=box-letter>Box ID</label>
+<div class=box-pickers>
+<select id=box-letter required>
+<option value disabled selected>Letter</option>
+</select>
+<select id=box-number required>
+<option value disabled selected>Number</option>
+</select>
+</div>
+</div>
+<div class=flex-col>
+<label for=item-qty>Quantity</label>
+<div class=quantity-control-wrapper>
+<input type=number id=item-qty value=1 min=1 required>
+<div class="qty-controls qty-horizontal">
+<button type=button class="qty-btn left" onclick=changeQuantity(-1)>
+<svg viewBox="0 0 24 24" xmlns=http://www.w3.org/2000/svg fill=none stroke=currentColor>
+<path stroke-linecap=round stroke-linejoin=round d="M19.5 12h-15" />
+</svg>
+</button>
+<button type=button class="qty-btn right" onclick=changeQuantity(1)>
+<svg viewBox="0 0 24 24" xmlns=http://www.w3.org/2000/svg fill=none stroke=currentColor>
+<path stroke-linecap=round stroke-linejoin=round d="M12 4.5v15m7.5-7.5h-15" />
+</svg>
+</button>
+</div>
+</div>
+</div>
+</div>
+<div class=flex-row>
+<div class=flex-col>
+<label for=item-shelf-life>Shelf Life (Days)</label>
+<input type=number id=item-shelf-life placeholder=Days value=7 min=1 required>
+</div>
+<div class=flex-col>
+<label for=item-expiry>Expiry Date</label>
+<input type=date id=item-expiry required>
+</div>
+</div>
+<button type=submit id=save-log-btn>
+<span id=save-button-text>Log New Item</span>
+<span id=save-button-icon>
+<span id=save-icon-content>
+<span id=feedback-icon>
+<svg viewBox="0 0 24 24" xmlns=http://www.w3.org/2000/svg fill=none stroke=currentColor style=display:none>
+<path stroke-linecap=round stroke-linejoin=round d="M5 13l4 4L19 7" />
+</svg>
+</span>
+<span id=feedback-message>Success!</span>
+</span>
+</span>
+</button>
+</form>
+</div>
+<div id=view-inventory-content class=inventory-view style=display:none;opacity:0>
+<div class=pulsing-equals>=</div>
+<h2>inventory.</h2>
+<div id=search-container class=search-container>
+<button id=search-toggle onclick=toggleSearch(true)>
+<svg viewBox="0 0 24 24" xmlns=http://www.w3.org/2000/svg>
+<path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+</svg>
+</button>
+<div id=search-bar class=search-bar>
+<input type=text id=search-input placeholder="Search term..." oninput=applySearchFilter(50) onfocus=this.select()>
+<select id=search-column onchange=applySearchFilter(50)>
+<option value=name>Item Name</option>
+<option value=box_id>Box ID</option>
+<option value=expiry_date>Expiry Date</option>
+<option value=initial_days>Initial Days</option>
+</select>
+</div>
+</div>
+<div class=inventory-header>
+<span>BOX ID</span>
+<span>ITEM NAME</span>
+<span>DAYS LOGGED</span>
+<span>DAYS LEFT</span>
+<span>EXPIRY DATE</span>
+<span>CONDITION</span>
+</div>
+<div class=inventory-scroll-wrapper>
+<ul id=inventory-data class=inventory-list>
+</ul>
+</div>
+<div class=inventory-footer>
+Total Items: <span id=total-item-count>0</span>
+</div>
+<button id=clear-all-btn class=clear-inventory-btn onclick=clearAllInventory()>Clear ALL Inventory (Hard Reset)</button>
+</div>
+</div>
+<script>let is24HourFormat=true;let currentTimeOfDay='';let isAnimatingClock=false;let isSearchExpanded=false;let intervalId=null;let mockData=[];const ALLOCATED_BOXES=['A9'];document.addEventListener('DOMContentLoaded',()=>{document.getElementById('item-form').addEventListener('submit',function(event){event.preventDefault();submitItem();});document.getElementById('item-shelf-life').addEventListener('input',updateExpiryDateFromDays);document.getElementById('item-expiry').addEventListener('input',updateDaysFromExpiryDate);populateBoxPickers();document.getElementById('item-expiry').min=getDateString(1);updateExpiryDateFromDays();updateTime(true);intervalId=setInterval(updateTime,1000);document.querySelectorAll('.dial-segment').forEach(element=>{element.addEventListener('click',()=>handleMenuClick(element));});document.querySelectorAll('.qty-controls .qty-btn').forEach(button=>{button.addEventListener('click',(event)=>{const change=parseInt(event.currentTarget.getAttribute('onclick').match(/changeQuantity\((.*)\)/)[1]);changeQuantity(change);event.preventDefault();});});document.getElementById('item-form').addEventListener('keydown',function(event){if(event.key==='Enter'){event.preventDefault();if(event.target.type!=='number'||event.target.id!=='item-qty'){submitItem();}}});fetchInventoryData();});function toggleTimeFormat(){if(isAnimatingClock)return;is24HourFormat=!is24HourFormat;const timeDisplay=document.getElementById('time');timeDisplay.classList.add('time-growing');isAnimatingClock=true;setTimeout(()=>{updateTime(true);timeDisplay.classList.remove('time-growing');isAnimatingClock=false;},200);}
+function updateTime(forceUpdate=false){const now=new Date();let hours=now.getHours();const minutes=now.getMinutes().toString().padStart(2,'0');const seconds=now.getSeconds().toString().padStart(2,'0');let timeOfDayText='';let displayHours=hours;if(!is24HourFormat){timeOfDayText=hours>=12?'PM':'AM';displayHours=hours%12;displayHours=displayHours?displayHours:12;}
+const timeString=`${displayHours.toString().padStart(2,'0')}:${minutes}:${seconds}`;const timeElement=document.getElementById('time');const timeOfDayElement=document.getElementById('time-of-day-text');if(timeElement.textContent!==timeString||forceUpdate){timeElement.textContent=timeString;timeOfDayElement.textContent=is24HourFormat?'24HR':timeOfDayText;}
+let newTimeOfDay='day';let newColorClass='time-day';if(hours>=22||hours<5){newTimeOfDay='night';newColorClass='time-night';}else if(hours>=17&&hours<22){newTimeOfDay='evening';newColorClass='time-evening';}else if(hours>=11&&hours<14){newTimeOfDay='noon';newColorClass='time-noon';}else{newTimeOfDay='day';newColorClass='time-day';}
+if(currentTimeOfDay!==newTimeOfDay||forceUpdate){timeElement.className='';timeElement.classList.add(newColorClass);currentTimeOfDay=newTimeOfDay;}}
+function handleMenuClick(element){const targetId=element.getAttribute('data-target');const segments=document.querySelectorAll('.dial-segment');const contentAreas=document.querySelectorAll('.content-area > div');const displayElement=document.getElementById('selected-option-display');const currentActive=Array.from(contentAreas).find(area=>area.style.opacity==='1');const targetArea=document.getElementById(targetId);if(!targetArea||targetArea===currentActive)return;segments.forEach(seg=>seg.classList.remove('selected'));element.classList.add('selected');displayElement.textContent=element.textContent;toggleSearch(false);const transitionTime=200;if(currentActive){currentActive.style.opacity='0';}
+setTimeout(()=>{contentAreas.forEach(area=>{if(area!==targetArea){area.style.display='none';area.style.opacity='0';}});targetArea.style.display='flex';if(targetId==='view-inventory-content'){fetchInventoryData();}
+void targetArea.offsetWidth;targetArea.style.opacity='1';},transitionTime);}
+function getDateString(offsetDays){const date=new Date();date.setDate(date.getDate()+offsetDays);const year=date.getFullYear();const month=(date.getMonth()+1).toString().padStart(2,'0');const day=date.getDate().toString().padStart(2,'0');return`${year}-${month}-${day}`;}
+function formatDateForDisplay(dateString){if(!dateString||dateString.length<10)return'';const parts=dateString.split('-');if(parts.length===3){return`${parts[2]}/${parts[1]}/${parts[0]}`;}
+return dateString;}
+function daysUntil(expiryDateStr){const today=new Date();today.setHours(0,0,0,0);const expiry=new Date(expiryDateStr);expiry.setHours(0,0,0,0);const diffTime=expiry.getTime()-today.getTime();const diffDays=Math.ceil(diffTime/(1000*60*60*24));return diffDays;}
+function updateExpiryDateFromDays(){const daysInput=document.getElementById('item-shelf-life');const dateInput=document.getElementById('item-expiry');const days=parseInt(daysInput.value);if(!isNaN(days)&&days>0){dateInput.value=getDateString(days);}}
+function updateDaysFromExpiryDate(){const daysInput=document.getElementById('item-shelf-life');const dateInput=document.getElementById('item-expiry');const date=dateInput.value;if(date){daysInput.value=daysUntil(date);}}
+function populateBoxPickers(){const letterSelect=document.getElementById('box-letter');const numberSelect=document.getElementById('box-number');letterSelect.innerHTML='<option value="" disabled selected>Letter</option>';numberSelect.innerHTML='<option value="" disabled selected>Number</option>';const currentAllocatedBoxes=mockData.map(item=>item.box_id);const allAllocatedBoxes=[...new Set([...currentAllocatedBoxes,...ALLOCATED_BOXES])];const letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');const numbers=Array.from({length:10},(_,i)=>i);letters.forEach(letter=>{const opt=document.createElement('option');opt.value=letter;opt.textContent=letter;letterSelect.appendChild(opt);});numbers.forEach(number=>{const numStr=number.toString();const opt=document.createElement('option');opt.value=numStr;opt.textContent=numStr;const selectedLetter=letterSelect.value;if(selectedLetter&&allAllocatedBoxes.includes(selectedLetter+numStr)){opt.disabled=true;opt.textContent+=' (USED)';}
+numberSelect.appendChild(opt);});letterSelect.onchange=function(){numberSelect.innerHTML='<option value="" disabled selected>Number</option>';numbers.forEach(number=>{const numStr=number.toString();const opt=document.createElement('option');opt.value=numStr;opt.textContent=numStr;if(allAllocatedBoxes.includes(this.value+numStr)){opt.disabled=true;opt.textContent+=' (USED)';}
+numberSelect.appendChild(opt);});};}
+function changeQuantity(change){const qtyInput=document.getElementById('item-qty');let currentValue=parseInt(qtyInput.value);if(isNaN(currentValue)){currentValue=1;}else{currentValue+=change;}
+if(currentValue<1){currentValue=1;}
+qtyInput.value=currentValue;}
+function validateForm(){let isValid=true;const form=document.getElementById('item-form');const requiredInputs=form.querySelectorAll('input[required], select[required]');requiredInputs.forEach(input=>{if(!input.value||(input.type==='number'&&parseInt(input.value)<1)){input.classList.add('invalid-input');isValid=false;}else{input.classList.remove('invalid-input');}});return isValid;}
+function resetFormStyles(){document.getElementById('item-form').reset();const invalidInputs=document.querySelectorAll('.invalid-input');invalidInputs.forEach(input=>input.classList.remove('invalid-input'));document.getElementById('item-expiry').min=getDateString(1);updateExpiryDateFromDays();}
+function sendDataToNodeMCU(itemData){const daysToExpiry=daysUntil(itemData.expiry_date);const params=new URLSearchParams({box:itemData.box_id,name:itemData.name,days:daysToExpiry,qty:itemData.quantity});const fetchUrl=`/log?${params.toString()}`;return new Promise((resolve,reject)=>{const controller=new AbortController();const signal=controller.signal;const timeoutId=setTimeout(()=>{controller.abort();reject(new Error('Request timed out. NodeMCU unreachable?'));},5000);fetch(fetchUrl,{signal:signal}).then(response=>{clearTimeout(timeoutId);if(!response.ok){return response.text().then(text=>{throw new Error(`Server returned status ${response.status}:${text}`);});}
+resolve(true);}).catch(error=>{clearTimeout(timeoutId);if(error.name==='AbortError'){reject(new Error('Request Aborted (Timeout).'));}else{reject(error);}});});}
+function submitItem(){if(!validateForm()){animateButtonFeedback(false,'validation','Please check highlighted fields.');return;}
+const boxLetter=document.getElementById('box-letter').value;const boxNumber=document.getElementById('box-number').value;const itemDays=document.getElementById('item-shelf-life').value;const newItem={box_id:boxLetter+boxNumber,name:document.getElementById('item-name').value,date_logged:getDateString(0),expiry_date:document.getElementById('item-expiry').value,quantity:parseInt(document.getElementById('item-qty').value),initial_days:parseInt(itemDays),notified_going_bad:false,notified_expired:false,last_notified_time:0};sendDataToNodeMCU(newItem).then(success=>{animateButtonFeedback(true,'success');mockData.push(newItem);resetFormStyles();populateBoxPickers();if(document.getElementById('view-inventory-content').style.display==='flex'){renderInventoryList(mockData);}}).catch(error=>{animateButtonFeedback(false,'network',`Data Log Failed:${error.message}`);console.error('Data logging failed:',error);});}
+function animateButtonFeedback(isSuccess,feedbackType,message=''){const button=document.getElementById('save-log-btn');const buttonText=document.getElementById('save-button-text');const buttonIconContainer=document.getElementById('save-button-icon');const iconContentWrapper=document.getElementById('save-icon-content');const feedbackIconPlaceholder=document.getElementById('feedback-icon');const feedbackMessage=document.getElementById('feedback-message');const pulsingPlus=document.querySelector('.pulsing-plus');const successSVG='<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />';const errorSVG='<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />';button.disabled=true;button.classList.add(isSuccess?'success-state':'error-state');feedbackIconPlaceholder.innerHTML=`<svg viewBox="0 0 24 24"xmlns="http://www.w3.org/2000/svg"fill="none"stroke="currentColor">${isSuccess?successSVG:errorSVG}</svg>`;feedbackMessage.textContent=isSuccess?'Success!':message;const svgIcon=feedbackIconPlaceholder.querySelector('svg');buttonText.style.opacity='0';const finalCleanup=()=>{buttonText.style.opacity='1';buttonIconContainer.style.opacity='0';button.disabled=false;button.classList.remove('success-state','error-state');feedbackMessage.style.opacity='0';feedbackMessage.style.transform='translateX(10px)';iconContentWrapper.classList.remove('network-error');if(svgIcon){svgIcon.classList.remove('icon-scale-up','icon-scale-down');}
+pulsingPlus.classList.remove('rotated');};setTimeout(()=>{buttonIconContainer.style.opacity='1';if(svgIcon){svgIcon.classList.remove('icon-scale-up','icon-scale-down');svgIcon.classList.add('icon-scale-up');}
+if(isSuccess){pulsingPlus.classList.add('rotated');}
+if(!isSuccess&&feedbackType!=='success'){iconContentWrapper.classList.add('network-error');feedbackMessage.style.opacity='1';feedbackMessage.style.transform='translateX(0)';}
+const DISPLAY_DURATION_MS=isSuccess?1800:2500;setTimeout(()=>{if(isSuccess){if(svgIcon){svgIcon.classList.remove('icon-scale-up');svgIcon.classList.add('icon-scale-down');}}
+setTimeout(finalCleanup,400);},DISPLAY_DURATION_MS);},300);}
+function getItemCondition(item){if(item.box_id==='A1'){if(item.condition_state==='STALE_ERROR'){return{remainingText:'N/A',conditionText:'STALE DATA',className:'warning-color'};}else if(item.condition_state==='EXPIRED'){return{remainingText:'DECAYED',conditionText:'SPOILAGE',className:'expired-color'};}else if(item.condition_state==='GOING_BAD'){return{remainingText:'OVER-RIPE',conditionText:'GOING BAD',className:'going-bad-color'};}}
+const daysLeft=daysUntil(item.expiry_date);const initialDays=item.initial_days||7;const goingBadThreshold=initialDays<=3?1:2;if(daysLeft<=0){return{remainingText:`EXPIRED(${daysLeft}d)`,conditionText:'EXPIRED',className:'expired-color'};}else if(daysLeft<=goingBadThreshold){return{remainingText:`${daysLeft}days`,conditionText:'GOING BAD',className:'going-bad-color'};}else{return{remainingText:`${daysLeft}days`,conditionText:'FRESH',className:'fresh-color'};}}
+function renderInventoryList(data){const listElement=document.getElementById('inventory-data');const totalCountElement=document.getElementById('total-item-count');const searchInput=document.getElementById('search-input');const searchColumn=document.getElementById('search-column');const searchTerm=searchInput.value.toLowerCase().trim();const searchKey=searchColumn.value;const staggerDelay=5;const filteredData=data.filter(item=>{if(!searchTerm)return true;let itemValue='';if(searchKey==='box_id'){itemValue=item.box_id?item.box_id.toLowerCase():'';}else if(searchKey==='expiry_date'){const ymd=item.expiry_date?item.expiry_date.toLowerCase():'';const dmy=formatDateForDisplay(item.expiry_date).toLowerCase();return ymd.includes(searchTerm)||dmy.includes(searchTerm);}else if(searchKey==='initial_days'){itemValue=item.initial_days?item.initial_days.toString():'';}else{itemValue=item[searchKey]?item[searchKey].toLowerCase():'';}
+return itemValue.includes(searchTerm);});filteredData.sort((a,b)=>{const daysA=daysUntil(a.expiry_date);const daysB=daysUntil(b.expiry_date);return daysA-daysB;});listElement.innerHTML='';filteredData.forEach((item,index)=>{const condition=getItemCondition(item);const daysLogged=daysUntil(item.date_logged)*-1;const listItem=document.createElement('li');listItem.innerHTML=`<span>${item.box_id}</span><span title="${item.name}">${item.name}</span><span>${daysLogged}d</span><span>${condition.remainingText}</span><span>${formatDateForDisplay(item.expiry_date)}</span><span class="condition-color ${condition.className}">${condition.conditionText}</span>`;setTimeout(()=>{listItem.style.opacity='1';},index*staggerDelay);listElement.appendChild(listItem);});totalCountElement.textContent=filteredData.length;}
+function toggleSearch(fromToggle){const searchBar=document.getElementById('search-bar');const searchInput=document.getElementById('search-input');const searchToggle=document.getElementById('search-toggle');if(fromToggle){isSearchExpanded=!isSearchExpanded;}else{isSearchExpanded=false;}
+if(isSearchExpanded){searchBar.classList.add('expanded');searchToggle.style.opacity='0';setTimeout(()=>{searchToggle.style.display='none';searchInput.focus();},300);}else{searchBar.classList.remove('expanded');searchInput.blur();searchInput.value='';renderInventoryList(mockData);searchToggle.style.display='flex';setTimeout(()=>{searchToggle.style.opacity='1';},10);}}
+function applySearchFilter(delay){clearTimeout(window._searchDebounce);window._searchDebounce=setTimeout(()=>{renderInventoryList(mockData);},delay);}
+function fetchInventoryData(){const fetchUrl='/inventory';console.log('Fetching inventory from:',fetchUrl);let fallbackData=mockData;fetch(fetchUrl).then(response=>{if(!response.ok){console.error(`HTTP error!Status:${response.status}.Using fallback data.`);return fallbackData;}
+return response.json();}).then(data=>{if(Array.isArray(data)){console.log(`Inventory fetched successfully.Items:${data.length}`);mockData=data;}else{console.error('Fetched data is not an array. Using fallback data.');mockData=fallbackData;}
+if(document.getElementById('view-inventory-content').style.display==='flex'){renderInventoryList(mockData);}
+populateBoxPickers();}).catch(error=>{console.error('Network Error fetching inventory:',error);mockData=fallbackData;if(document.getElementById('view-inventory-content').style.display==='flex'){renderInventoryList(mockData);}});}
+function clearAllInventory(){const showConfirmation=(message,onConfirm)=>{const modal=document.createElement('div');modal.style.cssText=`position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:1000;display:flex;justify-content:center;align-items:center;`;const content=document.createElement('div');content.style.cssText=`background:var(--bg-color);padding:30px;border-radius:8px;max-width:400px;text-align:center;border:2px solid var(--error-color);box-shadow:0 0 20px rgba(204,0,0,0.5);`;content.innerHTML=`<h3 style="color: var(--error-color); margin-top: 0;">WARNING!</h3><p style="color: var(--text-color); margin-bottom: 20px;">${message}</p><button id="confirm-yes"style="padding: 10px 20px; background: var(--error-color); color: white; border: none; border-radius: 5px; margin-right: 15px; cursor: pointer;">Confirm Delete</button><button id="confirm-no"style="padding: 10px 20px; background: var(--secondary-text); color: var(--selected-text); border: none; border-radius: 5px; cursor: pointer;">Cancel</button>`;modal.appendChild(content);document.body.appendChild(modal);document.getElementById('confirm-yes').onclick=()=>{document.body.removeChild(modal);onConfirm(true);};document.getElementById('confirm-no').onclick=()=>{document.body.removeChild(modal);onConfirm(false);};};const showInfo=(message,isError=false)=>{const modal=document.createElement('div');modal.style.cssText=`position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:1000;display:flex;justify-content:center;align-items:center;`;const content=document.createElement('div');content.style.cssText=`background:var(--bg-color);padding:30px;border-radius:8px;max-width:400px;text-align:center;border:2px solid ${isError?'var(--error-color)':'var(--success-color)'};box-shadow:0 0 20px ${isError?'rgba(204, 0, 0, 0.5)':'rgba(0, 204, 68, 0.5)'};`;content.innerHTML=`<h3 style="color: ${isError ? 'var(--error-color)' : 'var(--success-color)'}; margin-top: 0;">${isError?'Error':'Notification'}</h3><p style="color: var(--text-color); margin-bottom: 20px;">${message}</p><button id="info-ok"style="padding: 10px 20px; background: var(--secondary-text); color: var(--selected-text); border: none; border-radius: 5px; cursor: pointer;">OK</button>`;modal.appendChild(content);document.body.appendChild(modal);document.getElementById('info-ok').onclick=()=>{document.body.removeChild(modal);};};showConfirmation("This will permanently delete ALL inventory data and restart the device. This action cannot be undone.",(confirmed)=>{if(!confirmed)return;const fetchUrl='/clearall';fetch(fetchUrl).then(response=>{if(response.ok){showInfo("Inventory clear request sent. Device is restarting now. The screen may go blank until it reboots and connects to WiFi.");mockData=[];renderInventoryList(mockData);populateBoxPickers();}else{return response.text().then(text=>{throw new Error(`Server returned status ${response.status}:${text}`);});}}).catch(error=>{console.error('Error clearing inventory:',error);showInfo(`Failed to clear inventory:${error.message}.Check serial monitor on the NodeMCU.`,true);});});}</script>
+</body>
+</html>
+)====";
