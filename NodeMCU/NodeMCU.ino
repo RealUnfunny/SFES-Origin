@@ -11,7 +11,7 @@
 #include <stdarg.h>
 #include <SoftwareSerial.h>
 
-#include "****" //Web Content Header, Censored
+#include "***" //Web Content Header, Censored
 
 // =========================================================================
 // Network & Notification Constants (PROGMEM)
@@ -495,6 +495,15 @@ void checkAndPublishExpiries() {
             statusChanged = true;
           }
       }
+      else if (A1_STATS == 0)
+      {
+        if (item["notified_going_bad"].as<bool>() || item["notified_expired"].as<bool>()) {
+            item["notified_going_bad"] = false;
+            item["notified_expired"] = false;
+            inventoryModified = true;
+            Serial.println("A1 returned to FRESH. Notification flags reset.");
+          }
+      }
     }
     else //date based logic
     {
@@ -702,6 +711,9 @@ void loop()
     Serial.println(A1_STATS);
     Serial.println("\n");
     JsonBuff.clear();
+
+    checkAndPublishExpiries();
+    lastExpiryCheckTime = millis();
   }
 
   // Check Expiries periodically (Rate limited)
