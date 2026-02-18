@@ -668,7 +668,7 @@ void setup()
     Serial.println("FATAL: LittleFS Mount Failed.");
   } 
 
-  setup_wifi();a
+  setup_wifi();
   setupNTP();
   
   // Give the time library a moment to stabilize
