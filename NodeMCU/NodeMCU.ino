@@ -24,6 +24,7 @@ PROGMEM const int NTFY_PORT     = 80; // Standard HTTP port
 PROGMEM const char* NTFY_TOPIC  = "***"; // Censored
 PROGMEM const int HttpPort = 80;
 
+
 // Notification Status Strings (PROGMEM)
 PROGMEM const char* P_DEFAULT_PRIORITY   = "3";
 PROGMEM const char* P_URGENT_PRIORITY    = "5";
@@ -131,9 +132,11 @@ void setupNTP()
     
     // CRITICAL: Sync TimeLib with system time
     setTime(now_check);
+    setSyncProvider([]() -> time_t { return time(nullptr);});
+    setSyncInterval(60);
     
-    Serial.printf("Current date: %s\n", dateString(now()).c_str());
-    Serial.printf("TimeLib now(): %lu\n", now());
+    Serial.printf("Current date: %s\n", dateString(time(nullptr)).c_str());
+    Serial.printf("TimeLib time(nullptr): %lu\n", time(nullptr));
     sendNtfyNotification("Connected to the local time⏱️!", "NTP connection verified!", "", "");
   } else {
     Serial.println(" FAILED!");
@@ -142,9 +145,10 @@ void setupNTP()
 }
 
 String dateString(time_t t) {
-  return String(year(t)) + "-" + 
-         (month(t) < 10 ? "0" : "") + String(month(t)) + "-" + 
-         (day(t) < 10 ? "0" : "") + String(day(t));
+  struct tm* tmInfo = localtime(&t);
+  char buf[11];
+  strftime(buf, sizeof(buf), "%Y-%m-%d", tmInfo);
+  return String(buf);
 }
 
 time_t dateStringToTime(const char* dateStr) {
@@ -177,14 +181,14 @@ time_t dateStringToTime(const char* dateStr) {
 }
 
 long daysRemaining(time_t expiryTime) {
-    time_t nowTime = now();
-    tmElements_t tmNow;
-    breakTime(nowTime, tmNow);
-    tmNow.Hour = 0;
-    tmNow.Minute = 0; tmNow.Second = 0;
-    time_t midnightToday = makeTime(tmNow);
+  time_t nowTime = time(nullptr);
+  struct tm* tmNow = localtime(&nowTime);
+  tmNow -> tm_hour = 0;
+  tmNow -> tm_min = 0;
+  tmNow -> tm_sec = 0;
+  time_t midnightToday = mktime(tmNow);
     
-    return (expiryTime - midnightToday) / 86400L;
+  return (expiryTime - midnightToday) / 86400L;
 }
 
 
@@ -344,7 +348,7 @@ void handleLogItem(const String& boxID, const String& itemName, const String& da
   loadInventory(inventory);
 
   int daysExpiry = daysStr.toInt(); 
-  time_t nowTime = now();
+  time_t nowTime = time(nullptr);
   int currentYear = year(nowTime);
 
   Serial.printf("DEBUG: Current time: %lu (year: %d)\n", nowTime, currentYear);
@@ -473,8 +477,10 @@ void checkAndPublishExpiries() {
     if (boxID.equalsIgnoreCase("A1")) 
     {
       Serial.println("A1 is Active!");
+      Serial.println(A1_STATS);
       if(A1_STATS == 2)
       {
+        item["status"] = "EXPIRED";
         title = safeFormat("%s in Box %s has EXPIRED.", itemName.c_str(), boxID.c_str());
         message = safeFormat("Please clear **%s** (%s) at the earliest!", itemName.c_str(), boxID.c_str());
         priority = P_URGENT_PRIORITY; 
@@ -486,6 +492,9 @@ void checkAndPublishExpiries() {
       }
       else if (A1_STATS == 1)
       {
+          Serial.println(item["notified_going_bad"].as<bool>() ? "FLAG IS TRUE - blocked!" : "FLAG IS FALSE - should notify!");
+          item["status"] = "GOING_BAD";
+          inventoryModified = true;
           if (!item["notified_going_bad"].as<bool>()) {
             title = safeFormat("⚠ %s in Box %s is going bad!", itemName.c_str(), boxID.c_str());
             message = safeFormat("Please check **%s** (%s)! (Only 1 day left)", itemName.c_str(), boxID.c_str());
@@ -675,7 +684,7 @@ void setup()
   delay(2000);
   
   // Verify sync one more time
-  time_t finalCheck = now();
+  time_t finalCheck = time(nullptr);
   Serial.printf("Final time check: %lu (year: %d)\n", finalCheck, year(finalCheck));
   
   if (year(finalCheck) < 2024) {
